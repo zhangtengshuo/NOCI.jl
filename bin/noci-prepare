@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+command=${1:-help}
+shift || true
+
+case "$command" in
+  init)       exec "$root/scripts/preparation/initialize_case.sh" "$@" ;;
+  molcas)     exec "$root/scripts/preparation/run_openmolcas.sh" "$@" ;;
+  align)      exec "$root/scripts/preparation/align_fragments.sh" "$@" ;;
+  rotate)     exec "$root/scripts/preparation/rotate_orbitals.sh" "$@" ;;
+  commonorb)  exec "$root/scripts/preparation/build_common_orbitals.sh" "$@" ;;
+  integrals)  exec "${JULIA_BIN:-julia}" --startup-file=no --project="${NOCI_JULIA_PROJECT:-$root}" "$root/tools/import_seward_hdf5.jl" "$@" ;;
+  stage|check|plan) exec "${JULIA_BIN:-julia}" --startup-file=no --project="${NOCI_JULIA_PROJECT:-$root}" "$root/scripts/preparation/prepare.jl" "$command" "$@" ;;
+  run)        exec "$root/scripts/preparation/run_ahpc_noci.sh" "$@" ;;
+  help|-h|--help)
+    cat <<'EOF'
+Usage:
+  noci-prepare init NEW_CASE_DIRECTORY
+  noci-prepare check MANIFEST.yaml [--structure-only]
+  noci-prepare plan MANIFEST.yaml [--structure-only]
+  noci-prepare molcas INPUT.in [SCRATCH_DIRECTORY]
+  noci-prepare align AGGREGATE.xyz OUTPUT_DIRECTORY FRAGMENT.xyz [...]
+  noci-prepare rotate MATRIX.txt RUNFILE OUTPUT_DIRECTORY STATE.orb [...]
+  noci-prepare commonorb WORK_DIRECTORY COMMONORB.input FILE_MAP.tsv
+  noci-prepare integrals SEWARD_HDF5_DIRECTORY COMMONORB OUTPUT_PREFIX --frozen N --deleted N
+  noci-prepare stage STAGE MANIFEST.yaml [prepare|compute|finalize|all]
+      STAGE: validate|states|placement|commonorb|integrals|noci|run
+      Default all runs real calculations; check/plan are read-only.
+  noci-prepare run INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT [GEOMETRY.xyz]
+EOF
+    ;;
+  *) echo "Unknown preparation command: $command" >&2; exit 2 ;;
+esac

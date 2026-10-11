@@ -1,0 +1,73 @@
+#!/usr/bin/env julia
+
+using NOCI
+
+"""
+    _print_usage(io)
+
+Write the concise NOCI production command syntax to `io` and return `nothing`.
+Only the supplied host stream is changed, no scientific file or CUDA state is touched, and stream failures propagate.
+"""
+function _print_usage(io::IO)
+    println(io, "NOCI.jl ", noci_version(), " (CPU)")
+    println(io, "Usage:")
+    println(io, "  noci --version")
+    println(io, "  noci run INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT [GEOMETRY.xyz] [--test-mode]")
+    println(io, "  noci override SNAPSHOT.jld2 OVERRIDE.yaml [OUTPUT_DIRECTORY OUTPUT_ROOT]")
+    return nothing
+end
+
+"""
+    _run_cli(arguments)
+
+Parse one `run` or `override` command and execute the corresponding production API.
+Input scientific files remain read-only while requested output/checkpoint files are created, CUDA use follows the run YAML only, optional geometry is report provenance only, `--test-mode` enables extra real-time `.sec`/stdout progress without changing scientific arithmetic, and malformed arguments or calculation failures propagate with a nonzero process exit.
+"""
+function _run_cli(arguments::Vector{String})
+    isempty(arguments) && begin
+        _print_usage(stderr)
+        throw(ArgumentError("missing NOCI command"))
+    end
+    command = first(arguments)
+    if command in ("--version", "version")
+        length(arguments) == 1 || throw(ArgumentError("--version accepts no arguments"))
+        println("NOCI.jl ", noci_version())
+        return nothing
+    end
+    if command in ("--help", "-h", "help")
+        _print_usage(stdout)
+        return nothing
+    end
+    if command == "run"
+        run_arguments = arguments[2:end]
+        test_mode_count = count(==("--test-mode"), run_arguments)
+        test_mode_count <= 1 || throw(ArgumentError("--test-mode may be specified at most once"))
+        test_mode = test_mode_count == 1
+        positional = filter(!=("--test-mode"), run_arguments)
+        length(positional) in (3, 4) || begin
+            _print_usage(stderr)
+            throw(ArgumentError("run requires INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT, optional GEOMETRY.xyz, and optional --test-mode"))
+        end
+        input = read_noci_input(positional[1])
+        geometry_path = length(positional) == 4 ? positional[4] : nothing
+        run_noci(
+            input;
+            output=RunOutputOptions(positional[2], positional[3]; geometry_path),
+            test_mode,
+        )
+        return nothing
+    end
+    if command == "override"
+        length(arguments) in (3, 5) || begin
+            _print_usage(stderr)
+            throw(ArgumentError("override requires SNAPSHOT.jld2 OVERRIDE.yaml and optional OUTPUT_DIRECTORY OUTPUT_ROOT"))
+        end
+        output = length(arguments) == 5 ? RunOutputOptions(arguments[4], arguments[5]) : nothing
+        apply_caspt2_override(arguments[2], arguments[3]; output)
+        return nothing
+    end
+    _print_usage(stderr)
+    throw(ArgumentError("unknown NOCI command $command"))
+end
+
+_run_cli(ARGS)

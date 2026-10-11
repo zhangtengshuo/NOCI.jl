@@ -1,0 +1,75 @@
+# PySCF 原生 CAS → DFCD 的正式输入格式；本版尚未启用数值适配器。
+# 可运行 check/plan --structure-only；正式执行需要后续适配器和用户提供的原生 .npy 种子。
+schema_version: 4
+project: ethene_pyscf_dfcd
+method: ahpc_noci                      # 本标准只使用 AHPC-NOCI。
+
+geometry:
+  aggregate: geometry/ethene_dimer.xyz # 定义摆放位置，单位 Angstrom；按 mebf_table 行顺序分块。
+
+cas:
+  backend: pyscf                      # CAS 和积分后端独立声明，本例采用 PySCF 原生组合。
+  basis: cc-pvdz                      # 种子必须匹配 PySCF AO 基组、中心顺序与系数约定。
+  auxiliary_basis: cc-pvdz-jkfit       # CAS 也采用 DF；省略时继承 integrals 的辅助基。
+
+caspt2:
+  enabled: true                       # 默认开启；设 false 可关闭。PySCF CASPT2 适配器尚未实现。
+  ipea_shift: 0.0                     # 单位 Eh，明确写出以避免软件默认值变化。
+  imaginary_shift: 0.2                # 单位 Eh。
+  max_iterations: 80
+
+molecules:
+  f:                                  # 教程使用 f/g/h；也可以直接用 ethene 等字母数字名称。
+    symmetry: C1                     # 各分子分别声明点群，本版只执行 C1。
+    geometries:
+      GS0:
+        xyz: geometry/ethene_GS0.xyz
+        initial_orbitals:
+          default: orbitals/user_ethene_seed.npy # 用户原生 MO 系数；不能把 RasOrb 改后缀代替。
+          # S1: orbitals/user_ethene_s1special.npy # 需要专用种子时取消注释，其他态仍用 default。
+    states:                           # CAS 设置由用户负责，流程不自动选择或检查活性空间。
+      # spin_2S 是 2S；nelecas 为 [活性 alpha, 活性 beta] 电子数；ncore 是双占 inactive 数，不是冻结数。
+      S0: {charge: 0, spin_2S: 0, nelecas: [1, 1], ncore: 7, ncas: 2, root: 1}
+      S1: {charge: 0, spin_2S: 0, nelecas: [1, 1], ncore: 7, ncas: 2, root: 2}
+      T1: {charge: 0, spin_2S: 2, nelecas: [2, 0], ncore: 7, ncas: 2, root: 1}
+      D+: {charge: 1, spin_2S: 1, nelecas: [1, 0], ncore: 7, ncas: 2, root: 1}
+      D-: {charge: -1, spin_2S: 1, nelecas: [2, 1], ncore: 7, ncas: 2, root: 1}
+
+fragments:
+  f_99: {molecule: f, geometry: GS0, frozen_orbitals: false} # true 自动冻结 core；false 不冻结。
+  f_03: {molecule: f, geometry: GS0, frozen_orbitals: false}
+
+system:
+  charge: 0
+  spin_multiplicity: 1                 # T1T1 在本例耦合成总单重态。
+
+# 教程采用 f/g/h_数字；_ 两侧允许任意非空 ASCII 字母数字串，顺序只由行顺序决定。
+mebf_table:
+  - [f_99, S0, S1, S0, D+, D-, T1]
+  - [f_03, S0, S0, S1, D-, D+, T1]
+
+common_orbitals:
+  threshold: 1.0e-5                   # 默认值；轨道并集阈值，与辅助度量处理参数分开。
+
+integrals:
+  backend: pyscf
+  method: dfcd                        # DF/CDERI 度量白化因子，流程不生成 exact 四指标 ERI。
+  auxiliary_basis: cc-pvdz-jkfit        # 用户明确指定辅助基，程序不自动挑选。
+  metric_lindep: 1.0e-10              # 辅助库仑度量的小特征值舍弃条件，不是分子 CD 阈值。
+
+templates:                            # 流程内用户模板优先；删掉本块仍自动查找同名本地模板，再回退安装默认。
+  cas: templates/pyscf/cas.py.in
+  integrals: templates/pyscf/integrals_dfcd.py.in
+
+screening:
+  tau_ci: 1.0e-5
+  tau_ci_offdiagonal: 1.0e-5
+
+runtime:                              # 固定 CPU，不要求 CUDA、CondaPkg 或 MicroMamba.jl。
+  threads: 1
+  blas_threads: 1
+  scratch_mb: 8
+  heap_size_hint_mb: 512
+
+output:
+  checkpoint: true

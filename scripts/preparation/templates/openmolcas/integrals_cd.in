@@ -1,0 +1,12 @@
+&GATEWAY
+  coord = {{XYZ}}
+  basis = {{BASIS}}
+  group = nosym
+End of input
+
+&SEWARD
+  Cholesky
+  ThrCholesky
+  {{GENERATION_THRESHOLD}}
+  CHH5
+End of input

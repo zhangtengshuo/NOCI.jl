@@ -1,0 +1,22 @@
+# Native PySCF DF-CASSCF solver input; the workflow adapter is still reserved.
+# Raw solver output must be converted to the standard state bundle by that adapter.
+import numpy as np
+from pyscf import gto, lib, mcscf, scf
+
+lib.num_threads({{THREADS}})
+mol = gto.M(atom={{XYZ_LITERAL}}, basis={{BASIS_LITERAL}}, unit="Angstrom",
+            charge={{CHARGE}}, spin={{SPIN_2S}}, symmetry=False, verbose=4)
+mf = (scf.RHF(mol) if mol.spin == 0 else scf.ROHF(mol)).density_fit(auxbasis={{AUXILIARY_BASIS_LITERAL}})
+mf.kernel()
+if not mf.converged:
+    raise RuntimeError("PySCF SCF did not converge")
+mc = mcscf.CASSCF(mf, {{NCAS}}, ({{NELECAS_ALPHA}}, {{NELECAS_BETA}})).density_fit(auxbasis={{AUXILIARY_BASIS_LITERAL}})
+mc.ncore = {{NCORE}}
+mc.fcisolver.spin = {{SPIN_2S}}
+if {{ROOT}} > 1:
+    mc = mc.state_specific_(state={{ROOT}} - 1)
+mc.kernel(np.load({{INITIAL_ORBITALS_LITERAL}}, allow_pickle=False))
+if not mc.converged:
+    raise RuntimeError("PySCF CASSCF did not converge")
+np.savez({{STATE_OUTPUT_LITERAL}}, energy=mc.e_tot, mo_coeff=mc.mo_coeff, ci=mc.ci,
+         ncore=mc.ncore, ncas=mc.ncas, nelecas=mc.nelecas)

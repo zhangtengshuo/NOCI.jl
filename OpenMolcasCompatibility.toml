@@ -1,0 +1,18 @@
+schema_version = 1
+
+[release]
+gpu = false
+
+[openmolcas4noci]
+default_version = "26.06.2"
+accepted_versions = ["26.06.2"]
+chh5_major = 1
+chh5_minor = [0, 1]
+
+[versions."26.06.2"]
+upstream_version = "26.06"
+upstream_commit = "4e52760a9bec07a7d253ee2fc5ac29fc5203bf27"
+source_revision = "879222663e8d864d99a96a761236ca5d980d97c5"
+build_number = 0
+build = "openmpi_hdf5_mkl_0"
+capabilities = ["cas", "commonorb", "rotateorb", "cd", "ricd", "chh5", "library"]

@@ -1,0 +1,77 @@
+schema_version: 4
+project: ethene_trimer
+method: ahpc_noci                      # This standard uses AHPC-NOCI only.
+
+geometry:
+  aggregate: geometry/ethene_trimer.xyz     # Target placement geometry only; coordinates in Angstrom.
+
+cas:
+  backend: openmolcas                  # CAS and integral backends are declared independently; this release executes the OpenMolcas route.
+  integral_method: ricd               # Monomer CAS integral approximation is independent of stage 04; the CD example changes aggregate integrals only.
+  generation_threshold: 1.0e-4        # RICD atomic auxiliary-basis generation threshold.
+  basis: CC-PVDZ                      # User RasOrb seed must match this basis, monomer XYZ and AO ordering.
+
+caspt2:
+  enabled: true                       # Enabled by default; set false to disable. The PySCF CASPT2 adapter is unavailable.
+  ipea_shift: 0.0                     # In Eh; explicit values avoid changes in software defaults.
+  imaginary_shift: 0.2                # In Eh.
+  max_iterations: 80
+
+molecules:
+  f:                                  # f is a user-declared molecule species, not a placed aggregate instance.
+    symmetry: C1                     # Per-molecule point group; executable symmetry is C1 only.
+    geometries:
+      GS0:                            # Additional carriers such as GS1 have their own XYZ and seeds.
+        xyz: geometry/ethene_GS0.xyz
+        initial_orbitals:             # Same molecule/carrier/state shares the original calculation; reference actual user files here.
+          default: orbitals/ethene_ccpvdz_seed.RasOrb # Default seed for requested states; explicit state entries take priority.
+          # S1: orbitals/ethene_s1special.RasOrb # Uncomment only after supplying the state-specific seed.
+    states:                           # User CAS settings; the workflow does not assess active-space chemistry.
+      S0: {charge: 0, multiplicity: 1, nactel: 2, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 1 1", rlxroot: 1}
+      S1: {charge: 0, multiplicity: 1, nactel: 2, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 2; 2", rlxroot: 2}
+      T1: {charge: 0, multiplicity: 3, nactel: 2, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 1 1", rlxroot: 1}
+      D+: {charge: 1, multiplicity: 2, nactel: 1, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 1 1", rlxroot: 1}
+      D-: {charge: -1, multiplicity: 2, nactel: 3, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 1 1", rlxroot: 1}
+
+fragments:
+  f_99: {molecule: f, geometry: GS0, frozen_orbitals: false} # true freezes the automatic chemical core; false freezes none.
+  f_03: {molecule: f, geometry: GS0, frozen_orbitals: false}
+  f_12: {molecule: f, geometry: GS0, frozen_orbitals: false}
+
+system:
+  charge: 0
+  spin_multiplicity: 1                 # Fragment multiplicity differs from total spin; T1T1 is coupled to a singlet here.
+
+# First entry is the fragment label and later entries are MEBF columns; alphanumeric labels on each side of one underscore are not sorted numerically.
+mebf_table:
+  - [f_99, S0, S1, D+, D-, T1, T1]
+  - [f_03, S0, S0, D-, D+, T1, S0]
+  - [f_12, S0, S0, S0, S0, S0, T1]
+
+common_orbitals:
+  threshold: 1.0e-5                   # Default orbital-union retention threshold, independent of integral generation.
+
+integrals:
+  backend: openmolcas
+  method: ricd                      # ricd: atomic aCD/acCD auxiliary basis; cd: molecular ERI Cholesky.
+  generation_threshold: 1.0e-4        # Atomic auxiliary-basis tolerance for ricd, molecular ERI CD tolerance for cd.
+
+templates:                            # User templates take priority; omitting this block checks local matching templates before installed defaults.
+  cas: templates/openmolcas/cas.in
+  caspt2: templates/openmolcas/caspt2.in
+  fragment_reference: templates/openmolcas/fragment_reference.in
+  aggregate_reference: templates/openmolcas/aggregate_reference.in
+  integrals: templates/openmolcas/integrals_ricd.in
+
+screening:
+  tau_ci: 1.0e-5
+  tau_ci_offdiagonal: 1.0e-5
+
+runtime:                              # CPU standard; no CUDA or Julia Conda-management package required.
+  threads: 1
+  blas_threads: 1
+  scratch_mb: 8                       # NOCI blocked-contraction workspace budget, not a total-memory limit.
+  heap_size_hint_mb: 512              # Julia GC hint, not a total-memory limit.
+
+output:
+  checkpoint: true

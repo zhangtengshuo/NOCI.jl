@@ -1,0 +1,75 @@
+# Native PySCF CAS/DFCD input contract; the numerical adapter is unavailable in this release.
+# Use check/plan --structure-only; execution needs a future adapter and native user .npy seeds.
+schema_version: 4
+project: ethene_pyscf_dfcd
+method: ahpc_noci                      # This standard uses AHPC-NOCI only.
+
+geometry:
+  aggregate: geometry/ethene_dimer.xyz # Placement geometry in Angstrom, with fragment blocks in mebf_table row order.
+
+cas:
+  backend: pyscf                      # CAS and integral backends are separate declarations; this template selects native PySCF.
+  basis: cc-pvdz                      # Seed must match the native PySCF AO basis, center order and coefficient convention.
+  auxiliary_basis: cc-pvdz-jkfit       # CAS also uses DF; omitted auxiliary basis inherits from integrals.
+
+caspt2:
+  enabled: true                       # Enabled by default; set false to disable. The PySCF CASPT2 adapter is unavailable.
+  ipea_shift: 0.0                     # In Eh; explicit values avoid changes in software defaults.
+  imaginary_shift: 0.2                # In Eh.
+  max_iterations: 80
+
+molecules:
+  f:                                  # Short f/g/h names are convenient; other alphanumeric molecule names are permitted.
+    symmetry: C1                     # Each molecule declares its point group; executable symmetry is C1 only.
+    geometries:
+      GS0:
+        xyz: geometry/ethene_GS0.xyz
+        initial_orbitals:
+          default: orbitals/user_ethene_seed.npy # Native user MO coefficients; changing a RasOrb suffix is not a conversion.
+          # S1: orbitals/user_ethene_s1special.npy # Uncomment for a supplied state-specific seed; other states use default.
+    states:                           # Users choose CAS settings; the workflow does not choose or assess active spaces.
+      # spin_2S is 2S; nelecas is [active alpha, active beta]; ncore counts doubly occupied inactive orbitals, not frozen orbitals.
+      S0: {charge: 0, spin_2S: 0, nelecas: [1, 1], ncore: 7, ncas: 2, root: 1}
+      S1: {charge: 0, spin_2S: 0, nelecas: [1, 1], ncore: 7, ncas: 2, root: 2}
+      T1: {charge: 0, spin_2S: 2, nelecas: [2, 0], ncore: 7, ncas: 2, root: 1}
+      D+: {charge: 1, spin_2S: 1, nelecas: [1, 0], ncore: 7, ncas: 2, root: 1}
+      D-: {charge: -1, spin_2S: 1, nelecas: [2, 1], ncore: 7, ncas: 2, root: 1}
+
+fragments:
+  f_99: {molecule: f, geometry: GS0, frozen_orbitals: false} # true freezes the automatic chemical core; false freezes none.
+  f_03: {molecule: f, geometry: GS0, frozen_orbitals: false}
+
+system:
+  charge: 0
+  spin_multiplicity: 1                 # T1T1 is coupled to a total singlet in this example.
+
+# Each side of one underscore is a nonempty ASCII alphanumeric label; row order alone determines fragment order.
+mebf_table:
+  - [f_99, S0, S1, S0, D+, D-, T1]
+  - [f_03, S0, S0, S1, D-, D+, T1]
+
+common_orbitals:
+  threshold: 1.0e-5                   # Default orbital-union threshold, independent of auxiliary-metric handling.
+
+integrals:
+  backend: pyscf
+  method: dfcd                        # DF/CDERI metric-whitened factors; no exact four-index ERI is generated.
+  auxiliary_basis: cc-pvdz-jkfit        # Explicit user auxiliary basis; the program does not select one.
+  metric_lindep: 1.0e-10              # Small-eigenvalue rejection threshold for the auxiliary Coulomb metric, not molecular CD.
+
+templates:                            # User templates take priority; omitting this block checks local matching templates before installed defaults.
+  cas: templates/pyscf/cas.py.in
+  integrals: templates/pyscf/integrals_dfcd.py.in
+
+screening:
+  tau_ci: 1.0e-5
+  tau_ci_offdiagonal: 1.0e-5
+
+runtime:                              # CPU execution; no CUDA or Julia Conda-management package required.
+  threads: 1
+  blas_threads: 1
+  scratch_mb: 8
+  heap_size_hint_mb: 512
+
+output:
+  checkpoint: true

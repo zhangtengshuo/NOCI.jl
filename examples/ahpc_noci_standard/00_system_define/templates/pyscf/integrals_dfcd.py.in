@@ -1,0 +1,15 @@
+# Native AO DF/CDERI generation input; the standard workflow adapter is reserved.
+# The adapter must transform these blocks to its own CommonOrb, apply frozen-core
+# terms and export NOCI factor provenance; this raw HDF5 is not a NOCI factor bundle.
+import numpy as np
+from pyscf import df, gto, lib
+
+lib.num_threads({{THREADS}})
+mol = gto.M(atom={{XYZ_LITERAL}}, basis={{BASIS_LITERAL}}, unit="Angstrom",
+            charge={{CHARGE}}, spin={{SPIN_2S}}, symmetry=False, verbose=4)
+df.outcore.cholesky_eri_b(mol, {{CDERI_PATH_LITERAL}},
+                        auxbasis={{AUXILIARY_BASIS_LITERAL}},
+                        decompose_j2c="ED", lindep={{METRIC_LINDEP}},
+                        max_memory={{MEMORY_MB}})
+np.save({{ONE_AO_PATH_LITERAL}}, mol.intor("int1e_kin") + mol.intor("int1e_nuc"))
+np.save({{OVERLAP_PATH_LITERAL}}, mol.intor("int1e_ovlp"))
