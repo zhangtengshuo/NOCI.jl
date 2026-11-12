@@ -4,7 +4,8 @@
 
 完整输入和科学解释见 [标准算例详细教程](../../examples/ahpc_noci_standard/TUTORIAL.zh.md)。
 本指南使用同一套 schema-4、C1 CPU/OpenMolcas、所选根 CAS/CASPT2 和 RICD/CD 因子积分流程。
-先按 [安装指南](NOCI_Installation_Walkthrough.zh.md) 安装 CPU 发行版。
+先按 [安装指南](NOCI_Installation_Walkthrough.zh.md) 安装，默认为 CPU，增加 `--withgpu` 可安装 GPU 环境。
+阶段 05 需要 GPU 时，在阶段 00 的 manifest 设置 `runtime.use_gpu: true`。
 
 ## 复制算例
 

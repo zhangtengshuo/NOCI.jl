@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export JULIA_LOAD_PATH='@:@stdlib'
 
 (( $# >= 1 && $# <= 2 )) || { echo "usage: run_openmolcas.sh INPUT.in [SCRATCH_DIRECTORY]" >&2; exit 2; }
 input=$1

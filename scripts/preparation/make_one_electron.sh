@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export JULIA_LOAD_PATH='@:@stdlib'
 
 (( $# == 2 )) || { echo "usage: make_one_electron.sh WORK_DIRECTORY COMMONORB.input" >&2; exit 2; }
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)

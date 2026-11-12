@@ -186,7 +186,7 @@ function validate_case(manifest_path::String)
         "integrals" => Dict{String,Any}("method" => nothing, "generation_threshold" => nothing, "export" => nothing),
         "screening" => Dict{String,Any}("tau_ci" => nothing, "tau_ci_offdiag" => nothing),
         "runtime" => Dict{String,Any}("use_gpu" => nothing, "threads" => nothing, "blas_threads" => nothing,
-            "heap_size_hint_mb" => nothing, "scratch_mb" => nothing),
+            "heap_size_hint_mb" => nothing, "scratch_mb" => nothing, "gpu_device" => nothing, "gpu_devices" => nothing),
         "output" => Dict{String,Any}("checkpoint" => nothing))
     check_allowed_keys(manifest, schema, "manifest")
 
@@ -306,7 +306,7 @@ function validate_case(manifest_path::String)
     freeze_core = manifest["common_orbitals"]["freeze_core"]
     freeze_core isa Bool || error("common_orbitals.freeze_core must be true or false")
     runtime = manifest["runtime"]
-    runtime["use_gpu"] == false || error("the standard CPU chain requires runtime.use_gpu == false; GPU setup belongs to the optional tutorial")
+    runtime["use_gpu"] isa Bool || error("runtime.use_gpu must be boolean; GPU execution requires an explicitly installed GPU environment")
     runtime["threads"] isa Integer && runtime["threads"] >= 1 || error("runtime.threads must be a positive integer")
     runtime["blas_threads"] isa Integer && runtime["blas_threads"] >= 1 || error("runtime.blas_threads must be a positive integer")
     runtime["heap_size_hint_mb"] isa Integer && runtime["heap_size_hint_mb"] > 0 || error("runtime.heap_size_hint_mb must be a positive integer")

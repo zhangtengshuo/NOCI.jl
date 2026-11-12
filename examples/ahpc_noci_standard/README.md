@@ -3,7 +3,8 @@
 [English](README.md) | [中文](README.zh.md)
 
 Start with [the detailed tutorial](TUTORIAL.md) and the annotated [ethene dimer definition](00_system_define/ethene_dimer.yaml).
-This release provides the schema-4 C1 CPU route: OpenMolcas monomer CAS, optional single-state CASPT2, OpenMolcas RICD/CD integrals and AHPC-NOCI.
+This release provides the schema-4 C1 route: OpenMolcas monomer CAS, optional single-state CASPT2, OpenMolcas RICD/CD integrals and AHPC-NOCI.
+Preparation uses CPU; stage 05 defaults to CPU and supports an explicitly installed GPU environment selected with `runtime.use_gpu: true`.
 PySCF DFCD is a reserved adapter with structure templates; its full numerical workflow is unavailable.
 
 ```text

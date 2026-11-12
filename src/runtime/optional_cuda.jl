@@ -18,7 +18,7 @@ function _cuda_module()
                     isnothing(package) && error("CUDA is not installed in the selected profile")
                     Base.require(package)
                 catch error
-                    throw(GPUUnavailableError(0, "optional CUDA support is unavailable; select a release providing GPU support"))
+                    throw(GPUUnavailableError(0, "optional CUDA support is unavailable; install this release with --withgpu and use its GPU environment"))
                 end
             end
         end

@@ -4,13 +4,13 @@
 
 NOCI.jl 用 Julia 实现行列式对 NOCI（DP-NOCI）与活性 Hamiltonian 预收缩 NOCI（AHPC-NOCI）。
 程序从行列式、轨道和积分数据计算原始及重叠归一化的 $S/H_1/H_2/H$ 矩阵，并求解对称广义 NOCI 本征值问题。
-本日历版本提供 CPU 执行，版本权威是 `Project.toml`，CLI、科学输出和 JSON 一致报告完整版本。
+本日历版本提供 CPU 执行与可选 GPU 加速，版本权威是 `Project.toml`，CLI、科学输出和 JSON 一致报告完整版本。
 
 ## 安装和准备
 
 先读 [安装指南](Install/README.zh.md)，再使用 [schema-4 标准流程](examples/ahpc_noci_standard/TUTORIAL.zh.md)。
 默认安装包括独立编号的 CAS/积分后端 OpenMolcas4NOCI 26.06.2，适配由 `OpenMolcasCompatibility.toml` 声明和检查。
-已有兼容积分数据时可仅安装 CPU。
+已有兼容积分数据时可直接计算，无需调用 CAS／积分后端。
 
 ```bash
 bash Install/install.sh --plan
@@ -70,4 +70,23 @@ GronOR ([gitlab.com/gronor/gronor](https://gitlab.com/gronor/gronor)) is copyrig
 
 The fragment correlation-energy (CASPT2) shift with Gallup-Norbeck weighting, implemented in `src/core/correlation_shifts.jl`, likewise originates from GronOR (routine `gronor_correlation_energy`, Kathir, Havenith, and de Graaf, 2019, published in the paper above) and is rewritten in Julia with both the GronOR Fortran and the original paper weight conventions.
 
+## 可选 GPU 安装
 
+默认安装 CPU NOCI 与 OpenMolcas4NOCI，不安装 CUDA。
+增加 `--withgpu` 才安装独立锁定的 GPU 环境，其中包括 CUDA.jl 5.11.0 和 YAML 等准备流程依赖。
+
+```bash
+bash Install/install.sh --execute --withgpu
+bash Install/install.sh --execute --withgpu --cuda-runtime 12.8
+```
+
+未指定 `--execute` 时，安装器只打印计划。
+`--cuda-runtime` 为可选参数，必须与 `--withgpu` 一起使用，所选 runtime 需要兼容 NVIDIA 设备与驱动。
+CPU 与 GPU 环境各自声明所需依赖，不从账户默认 Julia 环境加载包。
+机器专属的 CUDA 偏好只写入安装目录。
+安装记录保存所选环境，激活前检查 GPU 扩展和一个小型 Float64 设备运算。
+
+标准计算输入仍默认为 CPU。
+在阶段 00 的 manifest 设置 `runtime.use_gpu: true`，阶段 05 才使用已安装的 GPU 环境；`runtime.gpu_device` 或 `runtime.gpu_devices` 选择设备。
+Julia 线程数必须为所选 GPU 数量的整数倍。
+CAS、轨道和积分准备使用 CPU，阶段 05 子进程保留所选 Julia 环境。

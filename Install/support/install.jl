@@ -4,15 +4,15 @@ using Tar
 using Dates
 include("bootstrap.jl")
 
-const SOURCE_PAYLOAD = ("LICENSE", "Manifest.toml", "Project.toml", "OpenMolcasCompatibility.toml", "README.md", "README.zh.md", "bin", "src", "tools/import_seward_hdf5.jl", "tools/openmolcas4noci.jl", "tools/seward_to_factor_bundle.jl", "scripts/preparation", "docs/tutorials", "examples/ahpc_noci_standard")
+const SOURCE_PAYLOAD = ("LICENSE", "Manifest.toml", "Project.toml", "OpenMolcasCompatibility.toml", "README.md", "README.zh.md", "bin", "src", "tools/import_seward_hdf5.jl", "tools/openmolcas4noci.jl", "tools/seward_to_factor_bundle.jl", "scripts/preparation", "docs/tutorials", "examples/ahpc_noci_standard", "ext", "optional/gpu", "Install/install.sh", "Install/release.toml", "Install/README.md", "Install/README.zh.md", "Install/support/install.jl", "Install/support/bootstrap.jl", "Install/support/smoke.jl", "Install/support/cpu_smoke.jl", "Install/support/gpu_smoke.jl", "Install/support/h2_chh5.in", "Install/support/h2_ricd_chh5.in", "Install/support/noci.sh", "Install/support/noci-prepare.sh")
 
 """
-    copy_cpu_product(source, target)
+    copy_product(source, target)
 
-Copy only the CPU product closure to a new version installation directory.
-Paths have no physical units, source files remain read-only, GPU implementations and management files are excluded, no dependency operation or scientific work occurs, and missing files, symlinks or copy failures raise without activation.
+Copy only the declared product closure to a new version installation directory.
+Paths have no physical units, source files remain read-only, management files and machine-local preferences are excluded, no dependency operation or scientific work occurs, and missing files, symlinks or copy failures raise without activation.
 """
-function copy_cpu_product(source::String, target::String)
+function copy_product(source::String, target::String)
     for name in SOURCE_PAYLOAD
         original = joinpath(source, name)
         ispath(original) || error("missing product payload: $name")
@@ -27,11 +27,10 @@ function copy_cpu_product(source::String, target::String)
             any(child -> islink(joinpath(directory, child)), subdirs) && error("product directory contains a symlink")
             filter!(child -> !startswith(child, "."), subdirs)
             for file in files
-                file == "AGENTS.md" && continue
+                file in ("AGENTS.md", "LocalPreferences.toml") && continue
                 startswith(file, ".") && continue
                 path = joinpath(directory, file)
                 relative = relpath(path, source)
-                startswith(relative, joinpath("src", "algorithms")) && occursin("cuda", lowercase(file)) && continue
                 islink(path) && error("product file is a symlink: $relative")
                 destination = joinpath(target, relative)
                 mkpath(dirname(destination))
@@ -122,6 +121,26 @@ function audit_cpu_lock(source::String)
 end
 
 """
+    audit_profile_dependencies(project_directory; gpu=false)
+
+Check the direct dependencies needed by standalone preparation and optional GPU entry points.
+Project and Manifest files are read-only, package identities have no physical units, no package loading or GPU initialization occurs, and a missing direct dependency or mismatched lock UUID raises before installation files are copied.
+"""
+function audit_profile_dependencies(project_directory::String; gpu::Bool=false)
+    project = TOML.parsefile(joinpath(project_directory, "Project.toml"))
+    manifest = TOML.parsefile(joinpath(project_directory, "Manifest.toml"))
+    required = gpu ? ("NOCI", "YAML", "CUDA", "CUDA_Runtime_jll") : ("YAML",)
+    for name in required
+        haskey(project["deps"], name) || error("$name must be a direct dependency of $project_directory")
+    end
+    for (name, uuid) in project["deps"]
+        entries = get(manifest["deps"], name, [])
+        length(entries) == 1 && entries[1]["uuid"] == uuid || error("locked direct dependency disagrees with Project: $name")
+    end
+    return nothing
+end
+
+"""
     verify_packages(prefix, expected, yaml)
 
 Compare the complete installed native package set with the release lock metadata.
@@ -174,32 +193,47 @@ function shell_quote(value::String)
 end
 
 """
-    install_release(root, source, config_path, features, activate, support)
+    install_release(root, source, config_path, features, activate, support, gpu_runtime="auto")
 
-Install a copied CPU NOCI source profile and explicitly selected OpenMolcas component with immutable release locks.
+Install a copied NOCI source profile with explicitly selected OpenMolcas and CUDA components with immutable release locks.
 Host paths, versions and package digests are recorded, only the chosen installation root/depot are mutated, completed native prefixes are verified and reused, CPU is the mandatory base, and missing assets or integrity failures leave activation unchanged.
 No CondaPkg, MicroMamba.jl, dependency resolution, package updates or scientific production runs occur; the small optional OpenMolcas acceptance probe must pass before activation.
 """
-function install_release(root::String, source::String, config_path::String, features::Set{String}, activate::Bool, support::String)
+function install_release(root::String, source::String, config_path::String, features::Set{String}, activate::Bool, support::String, gpu_runtime::String="auto")
     VERSION == v"1.12.6" || error("locked release requires Julia 1.12.6")
     config = TOML.parsefile(config_path)
     config["schema"] == 3 && config["platform"] == "linux-x86_64" || error("unsupported release configuration")
-    features ⊆ Set(["cpu", "openmolcas"]) && "cpu" in features || error("this release supports CPU and OpenMolcas components only")
+    features ⊆ Set(["cpu", "openmolcas", "gpu"]) && "cpu" in features || error("unsupported installation components")
     version = config["version"]
     project = TOML.parsefile(joinpath(source, "Project.toml"))
     project["version"] == version || error("installer and source versions disagree")
     policy = TOML.parsefile(joinpath(source, "OpenMolcasCompatibility.toml"))
-    policy["release"]["gpu"] == false || error("installer requires the CPU release profile")
+    "gpu" in features && !policy["release"]["gpu"] && error("this product does not include GPU support")
     config["program"]["version"] == policy["openmolcas4noci"]["default_version"] || error("backend installation pin disagrees with compatibility policy")
     occursin(r"^[0-9]+\.[0-9]+\.[0-9]+$", version) || error("invalid version")
     audit_cpu_lock(source)
+    audit_profile_dependencies(source)
+    "gpu" in features && audit_profile_dependencies(joinpath(source, "optional", "gpu"); gpu=true)
     target = joinpath(root, "v" * version)
     ispath(target) && error("version directory already exists; preserve it and use an isolated acceptance prefix")
     all(name -> ispath(joinpath(source, name)), SOURCE_PAYLOAD) || error("incomplete NOCI source payload")
+    mkpath(joinpath(root, "installation"))
     mkpath(target)
-    copy_cpu_product(source, target)
+    copy_product(source, target)
     instantiate_locked(target)
+    cpu_check = mktempdir(joinpath(root, "installation"); prefix="cpu-check-")
+    run(`$(Base.julia_cmd()) --startup-file=no --project=$target $(joinpath(support, "support", "cpu_smoke.jl")) $cpu_check`)
     scientific_project = target
+    if "gpu" in features
+        scientific_project = joinpath(target, "optional", "gpu")
+        if gpu_runtime != "auto"
+            occursin(r"^[0-9]+\.[0-9]+$", gpu_runtime) || error("invalid CUDA runtime version")
+            write_record(joinpath(scientific_project, "LocalPreferences.toml"), Dict("CUDA_Runtime_jll" => Dict("version" => gpu_runtime)))
+        end
+        instantiate_locked(scientific_project)
+        gpu_check = mktempdir(joinpath(root, "installation"); prefix="gpu-check-")
+        run(`$(Base.julia_cmd()) --startup-file=no --project=$scientific_project $(joinpath(support, "support", "gpu_smoke.jl")) $gpu_check`)
+    end
     runtime_context = Dict{String,String}()
     cache = joinpath(root, "installation", "downloads")
     if "openmolcas" in features
@@ -225,7 +259,8 @@ function install_release(root::String, source::String, config_path::String, feat
             mkpath(dirname(micromamba)); cp(binary, micromamba; force=true); chmod(micromamba, 0o755)
             mamba_env = Dict("MAMBA_ROOT_PREFIX" => joinpath(root, "installation", "mamba-cache"))
             if !isdir(dependency_prefix)
-                run(addenv(`$micromamba --no-rc create -y -p $dependency_prefix -f $(joinpath(spec,"dependencies.explicit.txt"))`, mamba_env))
+                explicit = joinpath(spec, "dependencies.explicit.txt")
+                run(addenv(`$micromamba --no-rc create -y -p $dependency_prefix -f $explicit`, mamba_env))
             end
             Base.invokelatest(verify_packages, dependency_prefix, dependencies, yaml)
             write_record(joinpath(dependency_prefix, "noci-dependencies.toml"), Dict("identity"=>identity, "count"=>length(dependencies)))
@@ -233,7 +268,9 @@ function install_release(root::String, source::String, config_path::String, feat
             archive = joinpath(work, basename(program_asset["url"]))
             cp(archive_download, archive)
             if !isdir(program_prefix)
-                run(addenv(`$micromamba --no-rc create -y --no-deps -p $program_prefix $archive`, mamba_env))
+                explicit = joinpath(work, "program.explicit.txt")
+                write(explicit, "@EXPLICIT\nfile://" * archive * "#" * program_asset["sha256"] * "\n")
+                run(addenv(`$micromamba --no-rc create --offline -y -p $program_prefix -f $explicit`, mamba_env))
                 ispath(joinpath(program_prefix, "lib")) && error("program prefix unexpectedly contains lib")
                 symlink(relpath(joinpath(dependency_prefix,"lib"), program_prefix), joinpath(program_prefix,"lib"))
             end
@@ -251,8 +288,11 @@ function install_release(root::String, source::String, config_path::String, feat
         end
     end
     julia = joinpath(Sys.BINDIR, "julia")
-    context = Dict("JULIA_BIN"=>julia,"NOCI_ROOT"=>target,"NOCI_JULIA_PROJECT"=>scientific_project,"JULIA_PROJECT"=>scientific_project,"JULIA_DEPOT_PATH"=>joinpath(root,"Julia","depot"))
+    context = Dict("JULIA_BIN"=>julia,"NOCI_ROOT"=>target,"NOCI_JULIA_PROJECT"=>scientific_project,"JULIA_PROJECT"=>scientific_project,"JULIA_DEPOT_PATH"=>joinpath(root,"Julia","depot"),"JULIA_LOAD_PATH"=>"@:@stdlib")
     merge!(context, runtime_context)
+    if "gpu" in features && haskey(ENV, "JULIA_CUDA_USE_COMPAT")
+        context["JULIA_CUDA_USE_COMPAT"] = ENV["JULIA_CUDA_USE_COMPAT"]
+    end
     environment = joinpath(target,"bin","noci-environment.sh")
     open(environment,"w") do io
         println(io,"# Generated installation context; this version owns its preparation commands.")
@@ -263,6 +303,9 @@ function install_release(root::String, source::String, config_path::String, feat
     end
     records = joinpath(root,"installation","records")
     record = Dict{String,Any}("schema"=>3,"version"=>version,"source"=>target,"components"=>sort!(collect(features)),"completed_at"=>string(now()),"julia"=>julia,"julia_version"=>string(VERSION),"scientific_project"=>scientific_project,"project_sha256"=>bytes2hex(open(sha256,joinpath(target,"Project.toml"))),"manifest_sha256"=>bytes2hex(open(sha256,joinpath(target,"Manifest.toml"))),"openmolcas"=>runtime_context)
+    if "gpu" in features
+        record["gpu"] = Dict("project"=>scientific_project,"cuda_version"=>config["gpu"]["cuda_version"],"runtime_preference"=>gpu_runtime,"project_sha256"=>bytes2hex(open(sha256,joinpath(scientific_project,"Project.toml"))),"manifest_sha256"=>bytes2hex(open(sha256,joinpath(scientific_project,"Manifest.toml"))))
+    end
     if "openmolcas" in features
         record["openmolcas_version"]=config["program"]["version"]
         record["openmolcas_build"]=config["program"]["build"]
@@ -271,6 +314,7 @@ function install_release(root::String, source::String, config_path::String, feat
     end
     write_record(joinpath(records,"v"*version*".toml"),record)
     mkpath(joinpath(root,"bin")); cp(joinpath(support,"support","noci.sh"),joinpath(root,"bin","noci");force=true);chmod(joinpath(root,"bin","noci"),0o755)
+    cp(joinpath(support,"support","noci-prepare.sh"),joinpath(root,"bin","noci-prepare");force=true);chmod(joinpath(root,"bin","noci-prepare"),0o755)
     if activate
         selected = joinpath(root,"noci")
         (ispath(selected) && !islink(selected)) && error("refusing to replace a real noci file/directory")
@@ -288,6 +332,6 @@ function install_release(root::String, source::String, config_path::String, feat
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    length(ARGS) == 6 || error("installer requires root, source, TOML config, components, activation, support")
-    install_release(abspath(expanduser(ARGS[1])),abspath(ARGS[2]),abspath(ARGS[3]),Set{String}(split(ARGS[4],',')),ARGS[5]=="true",abspath(ARGS[6]))
+    length(ARGS) in (6,7) || error("installer requires root, source, TOML config, components, activation, support and optional CUDA runtime")
+    install_release(abspath(expanduser(ARGS[1])),abspath(ARGS[2]),abspath(ARGS[3]),Set{String}(split(ARGS[4],',')),ARGS[5]=="true",abspath(ARGS[6]),length(ARGS)==7 ? ARGS[7] : "auto")
 end

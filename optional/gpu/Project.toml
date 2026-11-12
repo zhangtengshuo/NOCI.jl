@@ -1,0 +1,10 @@
+[deps]
+NOCI = "484c9ecc-6f00-4699-a1b9-b6f2cfd23547"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+
+[compat]
+CUDA = "=5.11.0"
+YAML = "0.4"
+julia = "1.10"

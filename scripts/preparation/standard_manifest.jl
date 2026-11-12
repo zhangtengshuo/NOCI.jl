@@ -212,7 +212,7 @@ function standard_read(path::String; require_files::Bool=true)
             "auxiliary_basis" => nothing, "metric_lindep" => nothing),
         "system" => Dict{String,Any}("charge" => nothing, "spin_multiplicity" => nothing),
         "screening" => Dict{String,Any}("tau_ci" => nothing, "tau_ci_offdiagonal" => nothing),
-        "runtime" => Dict{String,Any}("threads" => nothing, "blas_threads" => nothing, "scratch_mb" => nothing, "heap_size_hint_mb" => nothing),
+        "runtime" => Dict{String,Any}("threads" => nothing, "blas_threads" => nothing, "scratch_mb" => nothing, "heap_size_hint_mb" => nothing, "use_gpu" => nothing, "gpu_device" => nothing, "gpu_devices" => nothing),
         "output" => Dict{String,Any}("checkpoint" => nothing))
     check_allowed_keys(raw, schema, "manifest")
     raw["schema_version"] == 4 || error("recommended workflow requires schema_version: 4")
@@ -258,6 +258,7 @@ function standard_read(path::String; require_files::Bool=true)
     end
     common_threshold = get(get(raw, "common_orbitals", Dict()), "threshold", 1.0e-5)
     standard_positive(common_threshold, "common_orbitals.threshold")
+    get(raw["runtime"], "use_gpu", false) isa Bool || error("runtime.use_gpu must be boolean")
     for key in ("threads", "blas_threads", "scratch_mb", "heap_size_hint_mb")
         standard_positive(raw["runtime"][key], "runtime.$key"; integer=true)
     end
@@ -655,8 +656,9 @@ function standard_plan(path; structure_only=false)
     if !structure_only && raw["cas"]["backend"] == "openmolcas"
         NOCI.openmolcas4noci_identity(; required_capabilities=["cas", "commonorb", "rotateorb", "chh5", String(raw["integrals"]["method"]), String(raw["cas"]["integral_method"])])
     end
-    println("NOCI.jl ", NOCI.noci_version(), " | CPU")
-    println("project: ", manifest["project"], " | ahpc_noci | CPU")
+    compute = manifest["runtime"]["use_gpu"] ? "GPU requested" : "CPU"
+    println("NOCI.jl ", NOCI.noci_version(), " | ", compute)
+    println("project: ", manifest["project"], " | ahpc_noci | ", compute, "; preparation uses CPU")
     println("molecule symmetries: ", join(["$key=$(raw["molecules"][key]["symmetry"])" for key in sort!(collect(keys(raw["molecules"])))], ", "))
     pair = (String(raw["cas"]["backend"]), String(raw["integrals"]["backend"]), String(raw["integrals"]["method"]))
     println("CAS / integrals: ", join(pair, " / "), " | ", STANDARD_BACKENDS[pair])

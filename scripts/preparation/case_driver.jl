@@ -39,6 +39,21 @@ The location is read-only information used to reach the maintained preparation l
 case_root() = abspath(joinpath(@__DIR__, "..", ".."))
 
 """
+    case_julia_project()
+
+Return the installation-selected Julia project for a fresh NOCI preparation worker.
+The explicit environment takes priority over the current active project, paths have no physical units, no files or process state are changed, no GPU is loaded, and invalid downstream environments fail when the worker starts.
+"""
+function case_julia_project()
+    selected = strip(get(ENV, "NOCI_JULIA_PROJECT", ""))
+    if isempty(selected)
+        active = Base.active_project()
+        return isnothing(active) ? case_root() : dirname(active)
+    end
+    return abspath(expanduser(selected))
+end
+
+"""
     load_case(manifest_path)
 
 Validate and normalize a schema-4 registry or an existing legacy manifest and return `(manifest, base, root, fragment_states)`.
@@ -860,7 +875,10 @@ function stage_noci(manifest, base::String, root::String, fragment_states)
         "integrals" => Dict("backend" => "factorized", "one_electron" => joinpath(integral_directory, integral_prefix(manifest) * ".one"),
             "factor_bundle" => joinpath(integral_directory, standard_case(manifest) ? "factors.jld2" : integral_prefix(manifest) * ".two.jld2")),
         "screening" => Dict("tau_ci" => manifest["screening"]["tau_ci"], "tau_ci_offdiagonal" => manifest["screening"]["tau_ci_offdiag"], "tau_singularity" => 1.0e-12),
-        "runtime" => Dict("use_gpu" => manifest["runtime"]["use_gpu"], "scratch_bytes" => manifest["runtime"]["scratch_mb"] * 1024^2))
+        "runtime" => Dict{String,Any}("use_gpu" => manifest["runtime"]["use_gpu"], "scratch_bytes" => manifest["runtime"]["scratch_mb"] * 1024^2))
+    for key in ("gpu_device", "gpu_devices")
+        haskey(manifest["runtime"], key) && (input["runtime"][key] = manifest["runtime"][key])
+    end
     generated = joinpath(directory, prefix * ".yaml")
     write_atomic(generated, "# Generated from 00; edit the authoritative manifest, not this file.\n" * YAML.write(input))
     NOCI.read_noci_input(generated) # Parse structure only; no scientific input loading.
@@ -893,7 +911,7 @@ function stage_run(manifest, base::String, root::String, fragment_states, mode::
             aggregate = workflow_aggregate(manifest, base, root)
             julia = joinpath(Sys.BINDIR, "julia")
             hint = "--heap-size-hint=$(manifest["runtime"]["heap_size_hint_mb"])M"
-            command = `$julia --threads=$(manifest["runtime"]["threads"]) $hint --startup-file=no --project=$(case_root()) $(joinpath(case_root(), "scripts", "preparation", "prepare.jl")) execute $generated $directory $prefix $aggregate $(manifest["runtime"]["blas_threads"]) $(manifest["output"]["checkpoint"])`
+            command = `$julia --threads=$(manifest["runtime"]["threads"]) $hint --startup-file=no --project=$(case_julia_project()) $(joinpath(case_root(), "scripts", "preparation", "prepare.jl")) execute $generated $directory $prefix $aggregate $(manifest["runtime"]["blas_threads"]) $(manifest["output"]["checkpoint"])`
             run(command)
         end
     end

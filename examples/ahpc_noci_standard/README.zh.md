@@ -2,7 +2,8 @@
 
 从 [TUTORIAL.md](TUTORIAL.zh.md) 开始，再阅读 [00_system_define/ethene_dimer.yaml](00_system_define/ethene_dimer.yaml) 中的注释。
 本发行采用 `schema_version: 4`，仅提供这个标准算例目录。
-本版可执行 OpenMolcas CAS → OpenMolcas RICD/CD → AHPC-NOCI 的 C1、CPU 准备路线，尚未在新标准上执行真实科学验收。
+本版提供 OpenMolcas CAS → OpenMolcas RICD/CD → AHPC-NOCI 的 C1 标准路线。
+准备阶段使用 CPU；阶段 05 默认使用 CPU，也可在显式安装 GPU 环境后以 `runtime.use_gpu: true` 启用加速。
 各分子在 `molecules.<id>.symmetry` 声明自己的点群，本版只执行 C1；OpenMolcas 01 默认计算单态 CASPT2，设 `caspt2.enabled: false` 可关闭。
 用户可编辑的实际量化输入模板位于 [00_system_define/templates](00_system_define/templates/README.zh.md)，流程内文件优先，安装默认只作兜底。
 PySCF DFCD 的辅助基、种子格式和后端接口见 [BACKEND_CONTRACT.md](BACKEND_CONTRACT.zh.md)，对应模板本版仅可作结构检查。

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export JULIA_LOAD_PATH='@:@stdlib'
 
 (( $# == 2 )) || { echo "usage: make_factor_bundle.sh SEWARD_SOURCE.yaml OUTPUT.jld2" >&2; exit 2; }
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)

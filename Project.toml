@@ -4,6 +4,7 @@ uuid = "484c9ecc-6f00-4699-a1b9-b6f2cfd23547"
 version = "26.10.0"
 
 [compat]
+CUDA = "5"
 HDF5 = "0.17"
 JLD2 = "0.5"
 YAML = "0.4"
@@ -26,3 +27,9 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "Random"]
+
+[weakdeps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+
+[extensions]
+NOCICUDAExt = "CUDA"

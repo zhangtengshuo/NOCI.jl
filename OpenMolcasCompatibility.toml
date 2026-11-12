@@ -1,7 +1,7 @@
 schema_version = 1
 
 [release]
-gpu = false
+gpu = true
 
 [openmolcas4noci]
 default_version = "26.06.2"

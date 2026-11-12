@@ -9,7 +9,7 @@ Write the concise NOCI production command syntax to `io` and return `nothing`.
 Only the supplied host stream is changed, no scientific file or CUDA state is touched, and stream failures propagate.
 """
 function _print_usage(io::IO)
-    println(io, "NOCI.jl ", noci_version(), " (CPU)")
+    println(io, "NOCI.jl ", noci_version(), " (CPU; optional GPU)")
     println(io, "Usage:")
     println(io, "  noci --version")
     println(io, "  noci run INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT [GEOMETRY.xyz] [--test-mode]")

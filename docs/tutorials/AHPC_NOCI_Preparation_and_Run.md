@@ -4,7 +4,8 @@
 
 The complete input and scientific explanation is the [standard-case tutorial](../../examples/ahpc_noci_standard/TUTORIAL.md).
 This guide uses that same schema-4 case, C1 CPU/OpenMolcas backend, selected-root CAS/CASPT2 and factorized RICD/CD integrals.
-Install the CPU release first using the [installation walkthrough](NOCI_Installation_Walkthrough.md).
+Start with the [installation walkthrough](NOCI_Installation_Walkthrough.md); CPU is the default and `--withgpu` adds the GPU environment.
+For GPU execution in stage 05, set `runtime.use_gpu: true` in the stage-00 manifest.
 
 ## Copy the case
 

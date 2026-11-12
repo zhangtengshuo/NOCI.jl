@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export JULIA_LOAD_PATH='@:@stdlib'
 
 (( $# == 3 )) || { echo "usage: build_common_orbitals.sh WORK_DIRECTORY COMMONORB.input FILE_MAP.tsv" >&2; exit 2; }
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)

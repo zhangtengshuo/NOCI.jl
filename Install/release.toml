@@ -23,3 +23,6 @@ build = "openmpi_hdf5_mkl_0"
 subdir = "linux-64"
 url = "https://github.com/zhangtengshuo/OpenMolcas4NOCI/releases/download/v26.06.2/openmolcas4noci-26.06.2-openmpi_hdf5_mkl_0.tar.bz2"
 sha256 = "074f68ed7a78609c0fc03569fb584fb3664afdf499481d363f5b821660f60e8e"
+
+[gpu]
+cuda_version = "5.11.0"

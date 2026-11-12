@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export JULIA_LOAD_PATH='@:@stdlib'
 
 (( $# >= 4 )) || { echo "usage: rotate_orbitals.sh MATRIX.txt RUNFILE OUTPUT_DIRECTORY STATE.orb [...]" >&2; exit 2; }
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)

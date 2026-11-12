@@ -5,7 +5,8 @@
 Require this project's stage-03 `.vec/.det` and stage-04 `.one/.sys/factors.jld2`.
 Generate `<project>/<project>.yaml` with `algorithm.name: ahpc-noci` and `integrals.backend: factorized`, referencing short instance/state labels.
 Change scientific settings in stage 00 rather than editing this generated YAML.
-Run the CPU calculation and retain progress, `.out`, final `.json`, matrix snapshot and optional checkpoints.
+Run the calculation and retain progress, `.out`, final `.json`, matrix snapshot and optional checkpoints.
+The default is CPU; set `runtime.use_gpu: true` in stage 00 and install with `--withgpu` to use GPU acceleration.
 `finalize` requires the actual completion event and final JSON; an input file or placeholder result is insufficient.
 
 ```bash

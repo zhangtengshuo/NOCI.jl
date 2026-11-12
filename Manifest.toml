@@ -1,6 +1,6 @@
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "fbcb6224303f10cc58fe53c1d7e0119169f75385"
+project_hash = "7cc773ae369bd5d9c2f19ef8a4f300573e34c5f0"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -215,6 +215,11 @@ path = "."
 uuid = "484c9ecc-6f00-4699-a1b9-b6f2cfd23547"
 version = "26.10.0"
 
+    [deps.NOCI.extensions]
+    NOCICUDAExt = "CUDA"
+
+    [deps.NOCI.weakdeps]
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
