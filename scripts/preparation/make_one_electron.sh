@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/make_one_electron.sh
+# Purpose: Create the prepared one-electron integral inputs.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

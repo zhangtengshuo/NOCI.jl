@@ -151,7 +151,7 @@ end
     _build_spin_pair_intermediate!(workspace, preparation, coefficients, state_pair_hessian_response, pair, outputs, union_id, feature_offset, active_rank, cofactor_evaluation)
 
 Evaluate and write one validated CPU union spin-pair intermediate using either the rank-uniform polynomial PDDC engine or the LU-certified full-rank engine with polynomial fallback.
-Worker-local overlap/index/cofactor buffers and disjoint output slots are mutated, scientific inputs and the state-pair response are read-only, the return is `(lu_certificate_accepted, inverse_computed)`, and the LU path never falls back to SVD or DP-NOCI.
+Worker-local overlap/index/cofactor buffers and disjoint output slots are mutated, scientific inputs and the state-pair response are read-only, the return is `(lu_certificate_accepted, inverse_computed)`, and the LU path never falls back to SVD or G-NOCI.
 """
 function _build_spin_pair_intermediate!(
     workspace::SpinPairIntermediateWorkspace{T},
@@ -235,7 +235,7 @@ end
     build_spin_pair_intermediates(preparation, coefficients, support; cofactor_evaluation=PolynomialCofactorEvaluation, runtime=RuntimeOptions(), telemetry=nothing)
 
 Build CPU implicit AHPC spin-pair intermediates with Julia-thread-parallel union kernels, direct bit traversal, one NOCI state-pair determinant-Hessian response, union Hessian-pair index maps, and one reusable cofactor workspace per worker.
-The default polynomial PDDC route remains rank uniform with `O(q^5)` contracted-second work; the optional LU-certified route admits only residual/condition-certified full-rank overlaps and evaluates their contracted second cofactors in `O(q^4)`, while every rejected or ambiguous overlap falls back to the same polynomial route; output traversal is deterministic and no SVD, DP fallback, or CUDA work occurs.
+The default polynomial PDDC route remains rank uniform with `O(q^5)` contracted-second work; the optional LU-certified route admits only residual/condition-certified full-rank overlaps and evaluates their contracted second cofactors in `O(q^4)`, while every rejected or ambiguous overlap falls back to the same polynomial route; output traversal is deterministic and no SVD, G-NOCI fallback, or CUDA work occurs.
 """
 function build_spin_pair_intermediates(
     preparation::AHPCStatePairPreparation{T},

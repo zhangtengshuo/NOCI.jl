@@ -71,19 +71,19 @@ function RunOutputOptions(
 end
 
 """
-    CheckpointOptions(; enabled=true, directory, dp_checkpoint_pairs=8192, ahpc_checkpoint_blocks=32)
+    CheckpointOptions(; enabled=true, directory, gronor_noci_checkpoint_pairs=8192, ahpc_checkpoint_blocks=32)
 
 Configure restart-file placement and write batching independently from NOCI scientific algorithms.
-Pair and block intervals are positive dimensionless I/O frequencies, construction performs no file or CUDA I/O, and changing `dp_checkpoint_pairs` must never change DP traversal or reduction order.
+Pair and block intervals are positive dimensionless I/O frequencies, construction performs no file or CUDA I/O, and changing `gronor_noci_checkpoint_pairs` must never change G-NOCI traversal or reduction order.
 """
 struct CheckpointOptions
     enabled::Bool
     directory::String
-    dp_checkpoint_pairs::Int
+    gronor_noci_checkpoint_pairs::Int
     ahpc_checkpoint_blocks::Int
 
     """
-        CheckpointOptions(enabled, directory, dp_checkpoint_pairs, ahpc_checkpoint_blocks)
+        CheckpointOptions(enabled, directory, gronor_noci_checkpoint_pairs, ahpc_checkpoint_blocks)
 
     Construct validated checkpoint options and own the normalized directory string.
     No files are created, values are not used as scientific selectors, and empty paths or nonpositive intervals raise `ArgumentError`.
@@ -91,13 +91,13 @@ struct CheckpointOptions
     function CheckpointOptions(
         enabled::Bool,
         directory::AbstractString,
-        dp_checkpoint_pairs::Integer,
+        gronor_noci_checkpoint_pairs::Integer,
         ahpc_checkpoint_blocks::Integer,
     )
         isempty(strip(directory)) && throw(ArgumentError("checkpoint directory must not be empty"))
-        dp_checkpoint_pairs > 0 || throw(ArgumentError("dp_checkpoint_pairs must be positive"))
+        gronor_noci_checkpoint_pairs > 0 || throw(ArgumentError("gronor_noci_checkpoint_pairs must be positive"))
         ahpc_checkpoint_blocks > 0 || throw(ArgumentError("ahpc_checkpoint_blocks must be positive"))
-        return new(enabled, normpath(String(directory)), Int(dp_checkpoint_pairs), Int(ahpc_checkpoint_blocks))
+        return new(enabled, normpath(String(directory)), Int(gronor_noci_checkpoint_pairs), Int(ahpc_checkpoint_blocks))
     end
 end
 
@@ -119,7 +119,7 @@ struct NOCIEvaluationResult{T<:AbstractFloat}
 end
 
 """
-    CheckpointOptions(; enabled=true, directory, dp_checkpoint_pairs=8192, ahpc_checkpoint_blocks=32)
+    CheckpointOptions(; enabled=true, directory, gronor_noci_checkpoint_pairs=8192, ahpc_checkpoint_blocks=32)
 
 Construct production checkpoint options using explicit keyword configuration.
 Inputs are read-only, no file or device state is touched, and validation failures raise `ArgumentError`.
@@ -127,10 +127,10 @@ Inputs are read-only, no file or device state is touched, and validation failure
 function CheckpointOptions(;
     enabled::Bool=true,
     directory::AbstractString,
-    dp_checkpoint_pairs::Integer=8192,
+    gronor_noci_checkpoint_pairs::Integer=8192,
     ahpc_checkpoint_blocks::Integer=32,
 )
-    return CheckpointOptions(enabled, directory, dp_checkpoint_pairs, ahpc_checkpoint_blocks)
+    return CheckpointOptions(enabled, directory, gronor_noci_checkpoint_pairs, ahpc_checkpoint_blocks)
 end
 
 """
@@ -193,7 +193,7 @@ mutable struct CheckpointSession
     directory::String
     scientific_signature::String
     execution_signature::String
-    dp_checkpoint_pairs::Int
+    gronor_noci_checkpoint_pairs::Int
     ahpc_checkpoint_blocks::Int
     lock_io::IOStream
     commit_hook::Function

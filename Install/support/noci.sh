@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: Install/support/noci.sh
+# Purpose: Run the NOCI command from the managed release installation.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 script=$(readlink -f -- "${BASH_SOURCE[0]}")
 root=$(cd -- "$(dirname -- "$script")/.." && pwd -P)

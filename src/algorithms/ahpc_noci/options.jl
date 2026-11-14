@@ -103,7 +103,7 @@ end
 Return the stable CLI/report identifier for a public NOCI algorithm.
 The result is independent of AHPC acceleration choices.
 """
-algorithm_name(::DPNOCI) = "dp-noci"
+algorithm_name(::GronorNOCI) = "gronor-noci"
 
 """
     algorithm_name(algorithm::AHPCNOCI)

@@ -1,35 +1,6 @@
-#==============================================================================#
-#      ___           ___           ___                                         #
-#     /\__\         /\  \         /\  \          ___                           #
-#    /::|  |       /::\  \       /::\  \        /\  \                          #
-#   /:|:|  |      /:/\:\  \     /:/\:\  \       \:\  \         ___        ___  #
-#  /:/|:|  |__   /:/  \:\  \   /:/  \:\  \      /::\__\       /\  \      /\__\ #
-# /:/ |:| /\__\ /:/__/ \:\__\ /:/__/ \:\__\  __/:/\/__/       \:\  \    /:/  / #
-# \/__|:|/:/  / \:\  \ /:/  / \:\  \  \/__/ /\/:/  /      ___ /::\__\  /:/  /  #
-#     |:/:/  /   \:\  /:/  /   \:\  \       \::/__/      /\  /:/\/__/ /:/__/   #
-#     |::/  /     \:\/:/  /     \:\  \       \:\__\      \:\/:/  /    \:\  \   #
-#     /:/  /       \::/  /       \:\__\       \/__/       \::/  /      \:\  \  #
-#     \/__/         \/__/         \/__/               ██   \/__/        \/__/  #
-#                                                                              #
-#==============================================================================#
-
-#=
- NOCI.jl — Nonorthogonal Configuration Interaction in Julia
-
- File:            src/core/correlation_shifts.jl
- Purpose:         Loewdin orthogonalization, Gallup-Norbeck weights, and fragment CASPT2 correlation shifts.
- Copyright:       (C) 2026 Teng-Shuo Zhang
- SPDX-License-Identifier: Apache-2.0
- Original author: Teng-Shuo Zhang
- Algorithm origin: The fragment correlation-energy (CASPT2) diagonal shift on the orthogonalized NOCI
-                   Hamiltonian with Gallup-Norbeck weighting originates from the GronOR program (subroutine
-                   gronor_correlation_energy by R. K. Kathir, R. H. A. W. Havenith, and C. de Graaf, 2019;
-                   published in T. P. Straatsma, R. Broer, A. Sanchez-Mansilla, C. Sousa, and C. de Graaf,
-                   J. Chem. Theory Comput. 18, 3549-3565 (2022), doi:10.1021/acs.jctc.2c00266;
-                   gitlab.com/gronor/gronor, Apache-2.0, copyright University of Groningen). NOCI.jl rewrites the
-                   procedure in Julia, keeping both the GronOR Fortran and the original paper Gallup-Norbeck weight
-                   conventions.
-=#
+# File: src/core/correlation_shifts.jl
+# Purpose: Apply Loewdin orthogonalization, Gallup-Norbeck weights, and fragment correlation shifts.
+# Algorithm origin: Gallup-Norbeck weighting and the GronOR gronor_correlation_energy method (Straatsma et al., J. Chem. Theory Comput. 18, 3549-3565, 2022; doi:10.1021/acs.jctc.2c00266).
 
 """
     lowdin_orthogonalization(overlap)

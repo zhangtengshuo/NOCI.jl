@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/polynomial_spin_pair_cuda_multigpu_hessian_pair.jl
+ File:            src/runtime/cuda_resources/polynomial_spin_pair_cuda_multigpu_hessian_pair.jl
  Purpose:         Host and per-device storage estimates for multi-device determinant-Hessian polynomial contraction.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

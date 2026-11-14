@@ -1,3 +1,7 @@
+# File: Install/support/smoke.jl
+# Purpose: Run the installation smoke check with OpenMolcas and NOCI.
+# SPDX-License-Identifier: Apache-2.0
+
 using NOCI
 using Libdl
 using HDF5

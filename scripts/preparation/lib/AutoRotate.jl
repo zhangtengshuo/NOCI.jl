@@ -1,20 +1,6 @@
-# AutoRotate: 自动计算优化单体 → 晶体多分子结构位置的旋转平移矩阵 + 合并优化 cluster xyz
-#
-# 替代标准 grotate 流程里"手动指定对应原子"的前置几何步骤:
-#   输入: original_ABCX.xyz (晶体 cluster) + 任意个优化单体 xyz
-#   输出: matrix_A.txt, matrix_B.txt, ... (R 3x3 + t 3), MolAB[CDE...].xyz + RMSD 报告
-#
-# 算法 (排除 H, 只用重原子做对应与拟合):
-#   1. 鲁棒解析 3 个 xyz (容忍 "!" 注释行 / 能量行 / merged title)
-#   2. original cluster 按输入单体顺序和原子数依次切块
-#   3. 每个单体: 优化重原子 ↔ original 该单体同元素重原子, 用距离指纹贪心匹配建立对应
-#   4. Kabsch SVD (全部重原子最小二乘) 求 R, t:  x_orig = R·x_opt + t
-#   5. 合并 xyz: 各优化单体全原子经对应 R/t 变换后按输入顺序合并
-#   6. 报告重原子 RMSD；若超过阈值则报错, 视为结构/顺序不一致
-#
-# Kabsch 数学: 给定对应点集 P(opt), Q(orig), 最小化 sum_i ||Q_i - (R P_i + t)||^2
-#   mu_P = mean(P), mu_Q = mean(Q);  H = (P-mu_P)^T (Q-mu_Q);  H = U S V^T
-#   R = V diag(1,1, sign(det(V U^T))) U^T ;  t = mu_Q - R mu_P
+# File: scripts/preparation/lib/AutoRotate.jl
+# Purpose: Align optimized monomers with aggregate coordinates and write rigid transforms.
+# Algorithm: Heavy-atom matching with iterative Kabsch alignment.
 
 using LinearAlgebra
 using Printf
@@ -26,7 +12,7 @@ end
 
 isheavy(a::Atom) = a.element != "H" && a.element != "h"
 
-# --- xyz I/O (鲁棒: 容忍行1带注释、行2 为任意 title/能量) ---
+# --- XYZ input/output ---
 
 function read_xyz(path::AbstractString)::Vector{Atom}
     isfile(path) || error("xyz not found: $path")
@@ -65,7 +51,7 @@ function write_matrix(path::AbstractString, R::Matrix{Float64}, t::Vector{Float6
     end
 end
 
-# --- cluster 划分 ---
+# --- Partition the cluster by input monomer order ---
 
 function elem_counts(atoms::Vector{Atom})::Dict{String,Int}
     d = Dict{String,Int}()
@@ -89,8 +75,8 @@ end
 
 cluster_xyz_name(n::Integer) = "Mol" * join(monomer_label(i) for i in 1:n) * ".xyz"
 
-# original cluster 按输入单体顺序切分；不自动重排分子块。
-# 每一块的元素计数必须与对应优化单体一致，否则说明输入顺序或结构不符合预期。
+# Keep input fragment order.
+# Validate each fragment's elemental composition.
 function split_cluster(cluster::Vector{Atom}, monomers::Vector{Vector{Atom}})
     expected = sum(length, monomers)
     length(cluster) == expected ||
@@ -108,9 +94,9 @@ function split_cluster(cluster::Vector{Atom}, monomers::Vector{Vector{Atom}})
     return blocks
 end
 
-# --- 重原子距离指纹 + 贪心匹配 ---
+# --- Heavy-atom correspondence ---
 
-# 原子 i 的指纹 = 到其他重原子的距离升序向量 (对整体构象轻微变化稳定)
+# Sorted distances to the other heavy atoms.
 function fingerprint(coords::Vector{Vector{Float64}}, i::Int)::Vector{Float64}
     n = length(coords)
     d = Vector{Float64}(undef, n - 1)
@@ -125,8 +111,7 @@ end
 
 sqdist(a::Vector{Float64}, b::Vector{Float64}) = sum((a .- b) .^ 2)
 
-# 贪心匹配: orig 重原子 j ↔ opt 重原子 perm[j] (指纹平方距离最近, 不重复)
-# 对称等价原子指纹相同 → 互换, Kabsch 下无害
+# Greedy same-element matching without repeated atoms.
 function match_heavy(opt_coords::Vector{Vector{Float64}}, opt_elem::Vector{String},
                      orig_coords::Vector{Vector{Float64}}, orig_elem::Vector{String})
     n = length(opt_coords)
@@ -160,8 +145,8 @@ function kabsch(P::Matrix{Float64}, Q::Matrix{Float64})
     mu_Q = vec(sum(Q; dims = 1)) / n
     Pc = P .- mu_P'
     Qc = Q .- mu_Q'
-    H = Pc' * Qc                       # 3×3 协方差
-    F = svd(H)                         # F.U, F.S, F.V, F.Vt (不要 U,S,Vt = svd(...))
+    H = Pc' * Qc                       # 3x3 covariance matrix
+    F = svd(H)                         # SVD factors
     d = sign(det(F.V * F.U'))
     D = diagm([1.0, 1.0, d])
     R = F.V * D * F.U'
@@ -171,18 +156,16 @@ end
 
 function rmsd_heavy(P::Matrix{Float64}, Q::Matrix{Float64}, R::Matrix{Float64}, t::Vector{Float64})
     n = size(P, 1)
-    transformed = (R * P')' .+ t'      # n×3, 每行 R·p_i + t
+    transformed = (R * P')' .+ t'      # Transform all rows
     return sqrt(sum((transformed .- Q) .^ 2) / n)
 end
 
-# --- 单体对齐 ---
+# --- Monomer alignment ---
 
-# 返回 R, t, 重原子 RMSD。用重原子做对应+拟合, R/t 对全原子(含H)同样适用。
+# Fit heavy atoms and apply the transform to all atoms.
 #
-# 高对称分子(如 D2h 稠环)的重原子分成少数等价类, 距离指纹无法区分类内原子,
-# 贪心匹配可能在等价类内不一致配对(i 配 j, i' 却配到非 j 的对称像)使 Kabsch 偏离。
-# 解法: 指纹初值后做 ICP(迭代最近点)——用当前 R/t 变换后按几何最近邻重配对, 迭代
-# 到对应关系稳定, 几何最近邻自动给出等价类内的一致配对。
+# Equivalent heavy atoms can yield ambiguous fingerprint matches.
+# Refine correspondences using nearest neighbors after alignment.
 function align_monomer(opt::Vector{Atom}, orig_block::Vector{Atom}; niter::Int = 50,
                        max_rmsd::Float64 = 0.5)
     opt_idx  = findall(isheavy, opt)
@@ -194,16 +177,16 @@ function align_monomer(opt::Vector{Atom}, orig_block::Vector{Atom}; niter::Int =
     opt_elem = [opt[i].element for i in opt_idx]
     orig_elem = [orig_block[i].element for i in orig_idx]
     n = length(opt_c)
-    perm = match_heavy(opt_c, opt_elem, orig_c, orig_elem) # 初值: 同元素距离指纹贪心匹配
+    perm = match_heavy(opt_c, opt_elem, orig_c, orig_elem) # Initial fingerprint-based assignment
     R = Matrix{Float64}(I, 3, 3); t = zeros(Float64, 3); r = Inf
     for iter in 1:niter
-        P = permutedims(reduce(hcat, opt_c[perm])) # n×3, 行 k = opt_c[perm[k]]
-        Q = permutedims(reduce(hcat, orig_c))      # n×3, 行 k = orig_c[k]
+        P = permutedims(reduce(hcat, opt_c[perm])) # Matched optimized heavy-atom rows
+        Q = permutedims(reduce(hcat, orig_c))      # Reference heavy-atom rows
         R, t = kabsch(P, Q)
         r = rmsd_heavy(P, Q, R, t)
-        moved = [R * c + t for c in opt_c]         # 当前 R/t 下的 opt 重原子
+        moved = [R * c + t for c in opt_c]         # Optimized heavy atoms in the current frame
         newperm = zeros(Int, n); used = falses(n)
-        for j in 1:n                               # 每个 orig 重原子取最近未配 opt
+        for j in 1:n                               # Assign the nearest unused atom of the same element
             best = Inf; bi = 0
             for i in 1:n
                 used[i] && continue
@@ -214,7 +197,7 @@ function align_monomer(opt::Vector{Atom}, orig_block::Vector{Atom}; niter::Int =
             bi != 0 || error("failed to match heavy atom $(orig_elem[j]) during ICP refinement")
             newperm[j] = bi; used[bi] = true
         end
-        newperm == perm && break                   # 对应关系稳定, 收敛
+        newperm == perm && break                   # Stop when the correspondence stabilizes
         perm = newperm
     end
     r <= max_rmsd ||
@@ -224,7 +207,7 @@ end
 
 transform_atom(a::Atom, R::Matrix{Float64}, t::Vector{Float64}) = Atom(a.element, R * a.coord + t)
 
-# --- 主入口 ---
+# --- Entry point ---
 
 function auto_rotate(original_path::AbstractString, monomer_paths::AbstractVector{<:AbstractString};
                      outdir::AbstractString = ".", max_rmsd::Float64 = 0.5)

@@ -103,10 +103,10 @@ include("runtime/cuda_resources/lu_certified_spin_pair_cuda_hybrid.jl")
 include("runtime/cuda_resources/polynomial_spin_pair_cuda_complementary_cofactors.jl")
 include("algorithms/ahpc_noci/implicit_spin_feature_contraction.jl")
 include("algorithms/ahpc_noci/spin_matrix_assembly.jl")
-include("algorithms/dp_noci/pair_preparation.jl")
-include("algorithms/dp_noci/two_electron.jl")
+include("algorithms/gronor_noci/pair_preparation.jl")
+include("algorithms/gronor_noci/two_electron.jl")
 include("runtime/cuda_resources/two_electron_cuda.jl")
-include("algorithms/dp_noci/matrix_assembly.jl")
+include("algorithms/gronor_noci/matrix_assembly.jl")
 include("runtime/cuda_entrypoints.jl")
 include("runtime/evaluate.jl")
 include("runtime/output.jl")
@@ -118,7 +118,7 @@ include("runtime/run.jl")
 export noci_version
 export openmolcas4noci_identity
 export NOCIAlgorithm
-export DPNOCI
+export GronorNOCI
 export AHPCNOCI
 export AHPCBranch
 export AHPCSpinStringBranch
@@ -247,11 +247,11 @@ export SparseSpinPairWeights
 export PreparedSpinPairIncidence
 export AHPCSpinPairMatrixElement
 export NonInjectiveSpinPairMapping
-export DPFullOccupiedCofactors
-export DPDeterminantPairPreparation
-export DPDeterminantPairOneBodyElement
-export DPDeterminantPairMatrixElement
-export DPDirectTwoElectronWorkspace
+export GronorNOCIFullOccupiedCofactors
+export GronorNOCIDeterminantPairPreparation
+export GronorNOCIDeterminantPairOneBodyElement
+export GronorNOCIDeterminantPairMatrixElement
+export GronorNOCIDirectTwoElectronWorkspace
 export algorithm_name
 export backend_name
 export estimate_array_bytes
@@ -288,17 +288,17 @@ export build_spin_pair_intermediates
 export sparse_spin_pair_contraction_memory
 export contract_sparse_spin_pair_weights
 export assemble_ahpc_spin_string_matrices
-export dp_pair_preparation_memory
-export full_occupied_cofactors
-export prepare_dp_determinant_pair
-export contract_dp_one_body
-export dp_two_electron_memory
-export contract_dp_two_electron!
-export contract_dp_two_electron
-export contract_dp_determinant_pair!
-export contract_dp_determinant_pair
-export dp_noci_matrix_memory
-export assemble_dp_noci_matrices
+export gronor_noci_pair_preparation_memory
+export gronor_noci_full_occupied_cofactors
+export prepare_gronor_noci_determinant_pair
+export contract_gronor_noci_one_body
+export gronor_noci_two_electron_memory
+export contract_gronor_noci_two_electron!
+export contract_gronor_noci_two_electron
+export contract_gronor_noci_determinant_pair!
+export contract_gronor_noci_determinant_pair
+export gronor_noci_matrix_memory
+export assemble_gronor_noci_matrices
 export precontraction_memory
 export precontract_active_hamiltonian
 export evaluate

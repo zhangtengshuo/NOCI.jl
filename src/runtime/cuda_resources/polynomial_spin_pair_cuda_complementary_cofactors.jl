@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/polynomial_spin_pair_cuda_complementary_cofactors.jl
+ File:            src/runtime/cuda_resources/polynomial_spin_pair_cuda_complementary_cofactors.jl
  Purpose:         Shared direct-power terminal first complementary cofactor and occupied-orbital-pair-space second complementary cofactor evaluation.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

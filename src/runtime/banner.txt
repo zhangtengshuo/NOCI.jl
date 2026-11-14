@@ -12,11 +12,10 @@
 #     \/__/         \/__/         \/__/               ██   \/__/        \/__/  #
 #                                                                              #
 #==============================================================================#
-#==============================================================================#
 #                                                                              #
 # NOCI.jl - Nonorthogonal Configuration Interaction in Julia                   #
 #                                                                              #
-# Version {NOCI_VERSION}                                                     #
+# Version {NOCI_VERSION}                                                       #
 # Copyright:       (C) 2026 Teng-Shuo Zhang                                    #
 # SPDX-License-Identifier: Apache-2.0                                          #
 # Original author: Teng-Shuo Zhang                                             #

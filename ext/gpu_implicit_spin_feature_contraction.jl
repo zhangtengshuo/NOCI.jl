@@ -1,3 +1,7 @@
+# File: ext/gpu_implicit_spin_feature_contraction.jl
+# Purpose: Implement optional CUDA kernels for implicit spin-feature contraction.
+# SPDX-License-Identifier: Apache-2.0
+
 
 """
     _scatter_spin_pair_alpha_first_cofactor_response_kernel!(features, packed_values, feature_offsets, feature_pairs, block_value_first, width, rank)

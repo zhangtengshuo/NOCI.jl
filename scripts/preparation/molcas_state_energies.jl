@@ -1,3 +1,7 @@
+# File: scripts/preparation/molcas_state_energies.jl
+# Purpose: Read selected CASSCF and CASPT2 energies from OpenMolcas outputs.
+# SPDX-License-Identifier: Apache-2.0
+
 """
     read_molcas_state_energies(path, root; require_caspt2=false)
 

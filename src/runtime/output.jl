@@ -101,7 +101,11 @@ The banner is read-only and missing packaging data raises instead of silently ch
 """
 function _write_banner!(io::IO)
     isfile(NOCI_BANNER_PATH) || throw(ArgumentError("NOCI.jl banner file not found: $NOCI_BANNER_PATH"))
-    text = replace(read(NOCI_BANNER_PATH, String), "{NOCI_VERSION}" => string(noci_version()))
+    version_label = "Version $(noci_version())"
+    textwidth(version_label) <= 76 || throw(ArgumentError("NOCI.jl version label exceeds banner width"))
+    version_line = "# " * rpad(version_label, 76) * " #"
+    text = replace(read(NOCI_BANNER_PATH, String), r"(?m)^# Version \{NOCI_VERSION\} *#$" => version_line)
+    occursin("{NOCI_VERSION}", text) && throw(ArgumentError("NOCI.jl banner version placeholder is malformed"))
     print(io, text)
     endswith(text, '\n') || println(io)
     return nothing
@@ -146,7 +150,6 @@ function _write_geometry!(io::IO, geometry_path::Union{Nothing,AbstractString})
     _write_section!(io, "MOLECULAR GEOMETRY")
     if isnothing(geometry_path)
         println(io, "status = not supplied")
-        println(io, "note = geometry is report provenance; numerical NOCI data are defined by the supplied integrals and wave functions")
         return nothing
     end
     geometry = _read_xyz_geometry(geometry_path)
@@ -631,7 +634,7 @@ end
 """
     _write_production_summary!(logger, result)
 
-Append primary NOCI solutions and wave functions first, then normalized scientific matrices, raw diagnostics, aggregated telemetry, and output paths.
+Append NOCI solutions and wave functions, normalized and unnormalized matrices, aggregated telemetry, and output paths.
 The completed result is read-only, energy units are Hartree when supplied integrals are Hartree, and tables are emitted without terminal-width truncation.
 """
 function _write_production_summary!(logger::ProgressLogger, result::ProductionRunResult)
@@ -667,8 +670,7 @@ function _write_production_summary!(logger::ProgressLogger, result::ProductionRu
         _write_named_matrix!(io, name, matrix; row_labels=labels)
     end
 
-    _write_section!(io, "RAW ACCUMULATION DIAGNOSTICS")
-    println(io, "note = these matrices are pre-normalization implementation diagnostics; normalized matrices above are the primary scientific representation")
+    _write_section!(io, "UNNORMALIZED NOCI MATRICES")
     for (name, matrix) in (
         ("Raw overlap matrix", raw.overlap),
         ("Raw electronic one-body matrix", raw.electronic_one_body),

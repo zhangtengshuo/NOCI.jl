@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/polynomial_spin_pair_cuda_trivial.jl
+ File:            src/runtime/cuda_resources/polynomial_spin_pair_cuda_trivial.jl
  Purpose:         Exact empty and rank-zero endpoint of the polynomial determinant-cofactor CUDA construction.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

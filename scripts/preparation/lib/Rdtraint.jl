@@ -1,3 +1,7 @@
+# File: scripts/preparation/lib/Rdtraint.jl
+# Purpose: Convert OpenMolcas integral records into NOCI .one/.two and related metadata files.
+# Algorithm origin: GronOR rdtraint data-conversion workflow; OpenMolcas TRAINT/TRAONE data formats.
+
 using LinearAlgebra
 using Printf
 

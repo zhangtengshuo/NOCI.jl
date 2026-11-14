@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/rotate_orbitals.sh
+# Purpose: Apply rigid fragment transforms to the prepared orbital inputs.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

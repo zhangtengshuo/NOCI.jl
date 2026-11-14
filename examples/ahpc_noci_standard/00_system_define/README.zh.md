@@ -5,6 +5,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
+| `ethene_monomer.yaml` | 一个乙烯分子，S0／S1 两个 singlet MEBF，只有一行片段定义。 |
 | `ethene_dimer.yaml` | GS0S0；S0S0、S1S0、S0S1、D+D-、D-D+、T1T1。 |
 | `ethene_trimer.yaml` | GS0S0S0；严格采用用户指定的六列三聚体态表。 |
 | `ethene2_butadiene.yaml` | f_99/f_03 为乙烯，g_05 为丁二烯，展示 f/f/g 异种体系。 |

@@ -29,7 +29,7 @@ const NOCI_HARTREE_TO_MEV = 1000 * NOCI_HARTREE_TO_EV
     _scalar_coupling_matrices(hamiltonian, overlap)
 
 Evaluate both supported scalar electronic-coupling definitions for one Hamiltonian/overlap pair and return them as CPU matrices.
-Inputs are read-only, Hamiltonian energy units are preserved, no spatial coupling quantity is constructed, and numerical validation errors propagate from the coupling routines.
+Inputs are read-only, Hamiltonian energy units are preserved, and numerical validation errors propagate from the coupling routines.
 """
 function _scalar_coupling_matrices(
     hamiltonian::AbstractMatrix{T},
@@ -45,7 +45,7 @@ end
     _scalar_coupling_json(couplings)
 
 Convert pairwise and full-multistate scalar coupling matrices into explicit Hartree and meV JSON payloads.
-The matrices are read-only, only reporting containers and scaled CPU matrices are allocated, and no spatial or determinant-pair decomposition data are emitted.
+The matrices are read-only; reporting containers and scaled CPU matrices are allocated.
 """
 function _scalar_coupling_json(couplings)
     return Dict{String,Any}(
@@ -64,7 +64,7 @@ end
     _write_scalar_coupling_summary!(logger, result)
 
 Append unshifted and baseline-CASPT2-shifted scalar coupling matrices to the production `.out` report using both pairwise and complete-state-space Löwdin definitions.
-The production result is read-only, reported matrix values are meV with zero diagonal, host-only dense linear algebra is used, and no spatial coupling analysis is enabled.
+The production result is read-only, reported matrix values are meV with zero diagonal, and dense linear algebra runs on the CPU.
 """
 function _write_scalar_coupling_summary!(logger::ProgressLogger, result::ProductionRunResult)
     io = logger.out_io
@@ -78,7 +78,6 @@ function _write_scalar_coupling_summary!(logger::ProgressLogger, result::Product
     println(io, "diagonal = zero by definition")
     println(io, "pairwise_lowdin = [H_ij - 0.5*(H_ii + H_jj)*S_ij] / [1 - S_ij^2] after diagonal-overlap normalization")
     println(io, "full_multistate_lowdin = off-diagonal elements of S^(-1/2) * H * S^(-1/2) in the complete supplied MEBF space")
-    println(io, "note = scalar reporting only; coupling densities, cubes, decompositions, and other spatial outputs remain disabled")
 
     for (name, matrix) in (
         ("Unshifted pairwise Löwdin couplings / meV", unshifted.pairwise),
@@ -96,7 +95,7 @@ end
     _attach_scalar_coupling_json!(data, result)
 
 Attach explicit scalar-coupling blocks and historical pairwise `couplings_mev` aliases to an already constructed production JSON mapping.
-The result and existing scientific arrays are read-only, `data` is mutated only by adding reporting fields, no files or CUDA state are touched, and spatial coupling output remains absent.
+The result and existing scientific arrays are read-only; `data` is mutated by adding reporting fields and scaled CPU matrices.
 """
 function _attach_scalar_coupling_json!(
     data::Dict{String,Any},

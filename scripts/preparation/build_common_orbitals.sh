@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/build_common_orbitals.sh
+# Purpose: Construct the common orbital representation for a prepared case.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

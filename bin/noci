@@ -1,4 +1,7 @@
 #!/usr/bin/env julia
+# File: bin/noci
+# Purpose: Parse and dispatch the NOCI production command-line interface.
+# SPDX-License-Identifier: Apache-2.0
 
 using NOCI
 

@@ -1,42 +1,16 @@
-#==============================================================================#
-#      ___           ___           ___                                         #
-#     /\__\         /\  \         /\  \          ___                           #
-#    /::|  |       /::\  \       /::\  \        /\  \                          #
-#   /:|:|  |      /:/\:\  \     /:/\:\  \       \:\  \         ___        ___  #
-#  /:/|:|  |__   /:/  \:\  \   /:/  \:\  \      /::\__\       /\  \      /\__\ #
-# /:/ |:| /\__\ /:/__/ \:\__\ /:/__/ \:\__\  __/:/\/__/       \:\  \    /:/  / #
-# \/__|:|/:/  / \:\  \ /:/  / \:\  \  \/__/ /\/:/  /      ___ /::\__\  /:/  /  #
-#     |:/:/  /   \:\  /:/  /   \:\  \       \::/__/      /\  /:/\/__/ /:/__/   #
-#     |::/  /     \:\/:/  /     \:\  \       \:\__\      \:\/:/  /    \:\  \   #
-#     /:/  /       \::/  /       \:\__\       \/__/       \::/  /      \:\  \  #
-#     \/__/         \/__/         \/__/               ██   \/__/        \/__/  #
-#                                                                              #
-#==============================================================================#
+# File: src/runtime/cuda_resources/two_electron_cuda.jl
+# Purpose: Provide CUDA resources and direct two-electron kernels for conventional G-NOCI.
+# Algorithm origin: GronOR NOCI method described in GronOR (Straatsma et al., J. Chem. Theory Comput. 18, 3549-3565, 2022; doi:10.1021/acs.jctc.2c00266).
 
-#=
- NOCI.jl — Nonorthogonal Configuration Interaction in Julia
-
- File:            src/algorithms/dp_noci/two_electron_cuda.jl
- Purpose:         CUDA direct two-electron contraction with uploaded ERIs and reusable device workspaces.
- Copyright:       (C) 2026 Teng-Shuo Zhang
- SPDX-License-Identifier: Apache-2.0
- Original author: Teng-Shuo Zhang
- Algorithm origin: The determinant-pair method originates from the GronOR program (T. P. Straatsma, R. Broer,
-                   A. Sanchez-Mansilla, C. Sousa, and C. de Graaf, J. Chem. Theory Comput. 18, 3549-3565 (2022),
-                   doi:10.1021/acs.jctc.2c00266; gitlab.com/gronor/gronor, Apache-2.0). NOCI.jl rewrites the method in
-                   Julia with extensive single-node performance optimizations, keeping most functionality and settings
-                   consistent with GronOR.
-=#
-
-const DP_TWO_ELECTRON_GPU_THREADS = 256
+const GRONOR_NOCI_TWO_ELECTRON_GPU_THREADS = 256
 
 """
-    dp_two_electron_gpu_workspace_memory(T, integrals)
+    gronor_noci_two_electron_gpu_workspace_memory(T, integrals)
 
-Estimate device-resident storage for the reusable conventional DP-NOCI CUDA one-/two-body workspace, excluding the separately estimated CPU SVD preparation/workspace.
+Estimate device-resident storage for the reusable conventional G-NOCI CUDA one-/two-body workspace, excluding the separately estimated CPU SVD preparation/workspace.
 The integral object is read-only, returned units are bytes with zero host bytes, no CUDA context is initialized, and checked dimension overflow raises before allocation.
 """
-function dp_two_electron_gpu_workspace_memory(
+function gronor_noci_two_electron_gpu_workspace_memory(
     ::Type{T},
     integrals::PackedERIValues,
 ) where {T<:Union{Float32,Float64}}
@@ -55,26 +29,26 @@ function dp_two_electron_gpu_workspace_memory(
 end
 
 """
-    _dp_gpu_pair_labels(n_basis)
+    _gronor_noci_gpu_pair_labels(n_basis)
 
 Return one-based canonical orbital-pair labels as `Int32` CPU vectors for device upload.
 The basis count is dimensionless, outputs own their storage, no CUDA operation occurs, and nonpositive counts or `Int32` overflow raise before allocation.
 """
-function _dp_gpu_pair_labels(n_basis::Integer)
+function _gronor_noci_gpu_pair_labels(n_basis::Integer)
     n = Int(n_basis)
     n >= 1 || throw(ArgumentError("n_basis must be positive"))
-    n <= typemax(Int32) || throw(OverflowError("DP CUDA orbital labels exceed Int32 capacity"))
+    n <= typemax(Int32) || throw(OverflowError("G-NOCI CUDA orbital labels exceed Int32 capacity"))
     lower, upper = _canonical_orbital_pair_labels(n)
     return Int32.(lower), Int32.(upper)
 end
 
 """
-    _dp_regular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, p, q, r, s)
+    _gronor_noci_regular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, p, q, r, s)
 
-Return the full-rank dimensionless direct-minus-exchange DP cofactor term from device-resident AO factors.
+Return the full-rank dimensionless direct-minus-exchange G-NOCI cofactor term from device-resident AO factors.
 Inputs are read-only, no allocation or synchronization occurs, and orbital bounds are guaranteed by the calling CUDA kernel.
 """
-@inline function _dp_regular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, p::Int, q::Int, r::Int, s::Int)
+@inline function _gronor_noci_regular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, p::Int, q::Int, r::Int, s::Int)
     return @inbounds pair_sum[p, q] * pair_sum[r, s] -
                      alpha_factor[p, s] * alpha_factor[r, q] - alpha_factor[s, p] * alpha_factor[q, r] -
                      beta_factor[p, s] * beta_factor[r, q] - beta_factor[s, p] * beta_factor[q, r] -
@@ -83,12 +57,12 @@ Inputs are read-only, no allocation or synchronization occurs, and orbital bound
 end
 
 """
-    _dp_singular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, left_alpha, left_beta, right_alpha, right_beta, p, q, r, s)
+    _gronor_noci_singular_two_electron_term_gpu(alpha_factor, beta_factor, pair_sum, left_alpha, left_beta, right_alpha, right_beta, p, q, r, s)
 
-Return the nullity-one-or-two dimensionless direct-minus-exchange DP cofactor term from device-resident AO factors and null vectors.
+Return the nullity-one-or-two dimensionless direct-minus-exchange G-NOCI cofactor term from device-resident AO factors and null vectors.
 Inputs are read-only, no allocation or synchronization occurs, and orbital bounds are guaranteed by the calling CUDA kernel.
 """
-@inline function _dp_singular_two_electron_term_gpu(
+@inline function _gronor_noci_singular_two_electron_term_gpu(
     alpha_factor,
     beta_factor,
     pair_sum,

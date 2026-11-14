@@ -83,6 +83,7 @@ Traverse only a contiguous range of first-fragment roots from one legal spin-sec
 the exact serial DFS order within that range. The branch-and-bound equations and pre-Clebsch `tau_ci`
 semantics are identical to `_visit_multifragment_path_products!`; scientific inputs are read-only, each
 call owns its selected-index scratch, and invalid root ranges fail before traversal.
+Single-fragment ranges use the same original-CI visitor as serial counting, without construction-time truncation or a nonexistent second-fragment recursion.
 """
 function _visit_multifragment_path_root_range!(
     visitor,
@@ -93,8 +94,9 @@ function _visit_multifragment_path_root_range!(
 ) where {T<:AbstractFloat}
     isfinite(tau_ci) && tau_ci >= zero(T) || throw(ArgumentError("tau_ci must be finite and nonnegative"))
     fragment_count = length(prepared)
-    fragment_count >= 2 || throw(ArgumentError("multifragment root-range traversal requires at least two fragments"))
+    fragment_count >= 1 || throw(ArgumentError("MEBF root-range traversal requires at least one fragment"))
     length(path.sectors) == fragment_count || throw(DimensionMismatch("sector path length differs from fragment count"))
+    fragment_count == 1 && return _visit_single_fragment_roots!(visitor, prepared, path, root_positions)
 
     selected = zeros(Int, fragment_count)
     determinant_lists = Vector{Vector{Int}}(undef, fragment_count)

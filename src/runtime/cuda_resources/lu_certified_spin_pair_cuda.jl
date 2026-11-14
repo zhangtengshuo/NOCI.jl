@@ -1,3 +1,21 @@
+#==============================================================================#
+#      ___           ___           ___                                         #
+#     /\__\         /\  \         /\  \          ___                           #
+#    /::|  |       /::\  \       /::\  \        /\  \                          #
+#   /:|:|  |      /:/\:\  \     /:/\:\  \       \:\  \         ___        ___  #
+#  /:/|:|  |__   /:/  \:\  \   /:/  \:\  \      /::\__\       /\  \      /\__\ #
+# /:/ |:| /\__\ /:/__/ \:\__\ /:/__/ \:\__\  __/:/\/__/       \:\  \    /:/  / #
+# \/__|:|/:/  / \:\  \ /:/  / \:\  \  \/__/ /\/:/  /      ___ /::\__\  /:/  /  #
+#     |:/:/  /   \:\  /:/  /   \:\  \       \::/__/      /\  /:/\/__/ /:/__/   #
+#     |::/  /     \:\/:/  /     \:\  \       \:\__\      \:\/:/  /    \:\  \   #
+#     /:/  /       \::/  /       \:\__\       \/__/       \::/  /      \:\  \  #
+#     \/__/         \/__/         \/__/               ██   \/__/        \/__/  #
+#                                                                              #
+#==============================================================================#
+
+# File: src/runtime/cuda_resources/lu_certified_spin_pair_cuda.jl
+# Purpose: Estimate and manage CUDA resources for LU-certified spin-pair cofactors.
+# SPDX-License-Identifier: Apache-2.0
 
 function _lu_certified_spin_pair_gpu_workspace_bytes(
     ::Type{T},
@@ -41,7 +59,7 @@ residual/condition certification, first cofactors, and the O(q^4)
 contracted-second formula on CUDA. Production `lu_certified + use_gpu=true`
 dispatch uses `build_spin_pair_intermediates_cuda_lu_certified_hybrid_distributed`
 instead. Rejected unions here still use only CPU polynomial PDDC; no SVD or
-DP-NOCI fallback is permitted.
+G-NOCI fallback is permitted.
 """
 function build_spin_pair_intermediates_cuda_lu_certified_distributed(
     preparation::AHPCStatePairPreparation{T},

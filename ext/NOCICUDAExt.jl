@@ -1,3 +1,7 @@
+# File: ext/NOCICUDAExt.jl
+# Purpose: Load CUDA-backed NOCI algorithms through the optional package extension.
+# SPDX-License-Identifier: Apache-2.0
+
 module NOCICUDAExt
 
 import CUDA
@@ -20,11 +24,11 @@ import NOCI: AHPCContractionPhaseTiming,
     ActiveHamiltonianCoefficients,
     ActiveResponseSpace,
     ERIFactorValues,
-    DPDeterminantPairMatrixElement,
-    DPDeterminantPairOneBodyElement,
-    DPDeterminantPairPreparation,
-    DPDirectTwoElectronWorkspace,
-    DP_TWO_ELECTRON_GPU_THREADS,
+    GronorNOCIDeterminantPairMatrixElement,
+    GronorNOCIDeterminantPairOneBodyElement,
+    GronorNOCIDeterminantPairPreparation,
+    GronorNOCIDirectTwoElectronWorkspace,
+    GRONOR_NOCI_TWO_ELECTRON_GPU_THREADS,
     ExecutionTelemetry,
     GPUUnavailableError,
     ImplicitSpinPairIntermediates,
@@ -59,20 +63,20 @@ import NOCI: AHPCContractionPhaseTiming,
     _close_ahpc_precontraction_source!,
     _close_eri_factors_gpu_precontraction_source!,
     _close_eri_factors_gpu_shard!,
-    _close_dp_two_electron_gpu_workspace!,
+    _close_gronor_noci_two_electron_gpu_workspace!,
     _close_lu_certified_hybrid_gpu_workspace!,
     _close_lu_certified_spin_pair_gpu_workspace!,
     _close_polynomial_spin_pair_hessian_pair_gpu_workspace!,
-    _contract_dp_one_body_gpu!,
-    _contract_dp_two_electron_pair_rows_kernel!,
+    _contract_gronor_noci_one_body_gpu!,
+    _contract_gronor_noci_two_electron_pair_rows_kernel!,
     _copy_eri_factors_projection_tile_kernel!,
-    _dp_gpu_pair_labels,
-    _dp_regular_two_electron_term_gpu,
-    _dp_singular_two_electron_term_gpu,
+    _gronor_noci_gpu_pair_labels,
+    _gronor_noci_regular_two_electron_term_gpu,
+    _gronor_noci_singular_two_electron_term_gpu,
     _exchange_response_from_coulomb,
     _fill_eri_factors_projection_features_kernel!,
-    _fill_dp_ao_two_electron_factors_gpu!,
-    _fill_dp_occupied_factor!,
+    _fill_gronor_noci_ao_two_electron_factors_gpu!,
+    _fill_gronor_noci_occupied_factor!,
     _fill_packed_streamed_features!,
     _fill_polynomial_spin_pair_gpu_host_batch!,
     _finish_polynomial_spin_pair_gpu_host_union!,
@@ -118,7 +122,7 @@ import NOCI: AHPCContractionPhaseTiming,
     _project_spin_pair_alpha_first_cofactor_response_gpu_packed!,
     _recompute_lu_certified_hybrid_polynomial_fallback!,
     _reduce_eri_factors_gpu_partials,
-    _resize_dp_two_electron_workspace!,
+    _resize_gronor_noci_two_electron_workspace!,
     _resize_spin_pair_intermediate_workspace!,
     _runtime_for_gpu_device,
     _scatter_spin_pair_alpha_first_cofactor_response_kernel!,
@@ -134,10 +138,10 @@ import NOCI: AHPCContractionPhaseTiming,
     build_spin_pair_intermediates_cuda_polynomial_hessian_pair,
     canonical_pair_count,
     combine_memory_estimates,
-    contract_dp_determinant_pair!,
-    contract_dp_two_electron!,
-    dp_two_electron_gpu_workspace_memory,
-    dp_two_electron_memory,
+    contract_gronor_noci_determinant_pair!,
+    contract_gronor_noci_two_electron!,
+    gronor_noci_two_electron_gpu_workspace_memory,
+    gronor_noci_two_electron_memory,
     enforce_memory_limits,
     estimate_array_bytes,
     increment_counter!,
@@ -157,7 +161,7 @@ include(joinpath(@__DIR__, "..", "src", "algorithms/ahpc_noci/lu_certified_spin_
 include(joinpath(@__DIR__, "..", "src", "algorithms/ahpc_noci/lu_certified_spin_pair_cuda_hybrid.jl"))
 include(joinpath(@__DIR__, "..", "src", "algorithms/ahpc_noci/polynomial_spin_pair_cuda_union_recurrence.jl"))
 include(joinpath(@__DIR__, "..", "src", "algorithms/ahpc_noci/polynomial_spin_pair_cuda_complementary_cofactors.jl"))
-include(joinpath(@__DIR__, "..", "src", "algorithms/dp_noci/two_electron_cuda.jl"))
+include(joinpath(@__DIR__, "..", "src", "algorithms/gronor_noci/two_electron_cuda.jl"))
 include("gpu_JuliaMotra.jl")
 include("gpu_implicit_spin_feature_contraction.jl")
 

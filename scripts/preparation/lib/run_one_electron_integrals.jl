@@ -1,4 +1,7 @@
 #!/usr/bin/env julia
+# File: scripts/preparation/lib/run_one_electron_integrals.jl
+# Purpose: Produce .one/.sys files from OpenMolcas data without expanding four-index integrals.
+# SPDX-License-Identifier: Apache-2.0
 
 push!(LOAD_PATH, @__DIR__)
 include(joinpath(@__DIR__, "MolcasIO.jl"))

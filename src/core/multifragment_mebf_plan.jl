@@ -115,6 +115,7 @@ Build one exact-count MEBF assembly-plan entry without materializing its molecul
 The problem and shared packed cache are read-only, coupling targets and legal paths are generated once,
 each legal path is traversed exactly once to obtain both total and first-root survivor counts with
 production screening semantics, and checked overflow or invalid topology raises before return.
+Single-fragment entries have one highest-projection path with unit coupling and count their complete cached CI before collection pruning.
 """
 function _build_multifragment_mebf_assembly_entry(
     problem::NOCIProblemDefinition{T},
@@ -124,8 +125,8 @@ function _build_multifragment_mebf_assembly_entry(
 ) where {T<:Union{Float32,Float64}}
     mebf_index = Int(index)
     composition = problem.mebfs[mebf_index]
-    length(composition.fragment_state_indices) >= 2 || throw(ArgumentError(
-        "production multifragment MEBFs require at least two fragment states",
+    length(composition.fragment_state_indices) >= 1 || throw(ArgumentError(
+        "production MEBFs require at least one fragment state",
     ))
     fragment_entries = [problem.fragment_states[state_index] for state_index in composition.fragment_state_indices]
     n_inactive_orbitals = sum(entry.wavefunction.determinants.expansion.inactive_orbitals for entry in fragment_entries)
@@ -139,8 +140,8 @@ function _build_multifragment_mebf_assembly_entry(
         ))
         push!(packed, prepared_fragments[state_index])
     end
-    targets = _coupling_targets(
-        length(packed),
+    targets = _multifragment_coupling_targets(
+        packed,
         problem.spin_multiplicity,
         composition.coupling_multiplicities,
     )

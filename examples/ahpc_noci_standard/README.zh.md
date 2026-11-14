@@ -8,6 +8,8 @@
 用户可编辑的实际量化输入模板位于 [00_system_define/templates](00_system_define/templates/README.zh.md)，流程内文件优先，安装默认只作兜底。
 PySCF DFCD 的辅助基、种子格式和后端接口见 [BACKEND_CONTRACT.md](BACKEND_CONTRACT.zh.md)，对应模板本版仅可作结构检查。
 
+一个分子的多套态波函数也可进行 NOCI，见 [乙烯单分子定义](00_system_define/ethene_monomer.zh.yaml) 和详细教程的单分子章节。
+
 ```text
 00_system_define/       多个独立 project 的完整 YAML、XYZ 和用户种子
   templates/            当前流程的可编辑实际输入模板

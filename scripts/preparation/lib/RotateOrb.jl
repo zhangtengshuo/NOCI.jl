@@ -1,12 +1,7 @@
 #!/usr/bin/env julia
-# Rotate C1 OpenMolcas/GronOR INPORB files with a matrix written by AutoRotate.jl.
-#
-# Usage:
-#   julia RotateOrb.jl matrix_A.txt S0.orb S1.orb D+.orb ... [--runfile RUNFILE] [--out-dir DIR]
-#
-# The orbital file itself does not contain AO basis labels.  As in the original
-# grotate.f90, this script reads "Unique Basis Name" from a C1 OpenMolcas
-# RUNFILE to identify s/p/d/f/g shell blocks.
+# File: scripts/preparation/lib/RotateOrb.jl
+# Purpose: Rotate C1 INPORB orbitals using rigid transforms and OpenMolcas RUNFILE shell labels.
+# Interface reference: OpenMolcas RUNFILE basis metadata and the GronOR grotate workflow.
 
 using LinearAlgebra
 using Printf

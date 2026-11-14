@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: bin/noci-prepare
+# Purpose: Dispatch the NOCI fragment preparation entrypoint.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

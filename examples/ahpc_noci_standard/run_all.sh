@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: examples/ahpc_noci_standard/run_all.sh
+# Purpose: Run all six stages of the standard AHPC-NOCI example.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 case_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 manifest=${1:-ethene_dimer.yaml}

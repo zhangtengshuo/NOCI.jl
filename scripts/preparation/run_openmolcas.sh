@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/run_openmolcas.sh
+# Purpose: Run the configured OpenMolcas backend for a prepared input.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

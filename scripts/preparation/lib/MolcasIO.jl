@@ -1,10 +1,6 @@
-# ccall wrappers for OpenMolcas libmolcas.so (ILP64 build) — read-only side.
-#
-# Used by the Class B preprocess tools (grotate / gcommon / rdcho / rdtraint),
-# which only *consume* Molcas data (RunFile / OneInt / DaFile). Write paths
-# (Put_* / WrOne / OpnOne-create) are intentionally omitted — add them back if
-# a future tool needs to write. Tool-specific wrappers (Cho_X_*, DANAME_MF,
-# DACLOS, WR_MOTRA_Info) are added alongside the tool that needs them.
+# File: scripts/preparation/lib/MolcasIO.jl
+# Purpose: Provide Julia ccall access to selected OpenMolcas RunFile, OneInt, and DaFile interfaces.
+# Interface reference: OpenMolcas libmolcas RunFile, OneInt, and DaFile APIs.
 
 using Libdl
 import NOCI

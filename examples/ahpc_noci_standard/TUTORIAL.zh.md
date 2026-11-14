@@ -5,6 +5,37 @@
 PySCF DFCD 是后续扩展路线，本版提供结构模板与明确的数据契约，不宣称已经实现或验证其数值链路。
 在目标环境中使用本目录的独立副本完成实际验收；输入模板和结构检查不能代替真实科学计算。
 
+## 单分子 NOCI
+
+[ethene_monomer.yaml](00_system_define/ethene_monomer.yaml) 定义一个乙烯分子的 S0／S1 两个 singlet MEBF，另有同科学定义的中文注释版 `ethene_monomer.zh.yaml`。
+沿用同一 schema 与 00–05 流程：
+
+```yaml
+geometry:
+  aggregate: geometry/ethene_GS0.xyz
+fragments:
+  f_01: {molecule: f, geometry: GS0, frozen_orbitals: false}
+system:
+  charge: 0
+  spin_multiplicity: 1
+mebf_table:
+  - [f_01, S0, S1]
+```
+
+以上是完整示例中分子／CAS／模板定义的补充片段，不能单独作为输入运行。
+单片段也可以提供多套独立优化的态轨道，仍保留摆放与 CommonOrb 准备，使所有波函数和积分位于同一公共空间。
+构造只使用原始最高自旋投影 CI，耦合链为空、耦合系数为 1；完整原始 CI 先归一化，再做现有集合剪枝，不施加片段乘积的预截断，也不在剪枝后再次归一化。
+直接数值输入的 G-NOCI 与 AHPC-NOCI 都经过这个共享 MEBF 基座，标准准备 YAML 仍只选择 RICD/CD 因子路线的 AHPC-NOCI。
+所有 MEBF 的总电子数、指定总自旋以及该片段的 inactive／active 数必须一致，单分子支持不意味着混合不同电荷或自旋扇区。
+CASPT2 仍默认开启，示例使用已提供的乙烯结构与 RasOrb 种子。
+
+在初始化后的用户算例目录中，第一条命令用于审阅，第二条命令会启动真实计算：
+
+```bash
+noci-prepare plan 00_system_define/ethene_monomer.yaml
+bash run_all.sh ethene_monomer.yaml
+```
+
 ## 1. 开始前，用户提供什么
 
 先完成需要的单体结构优化、频率检查和目标聚集体结构准备，再开始本流程。

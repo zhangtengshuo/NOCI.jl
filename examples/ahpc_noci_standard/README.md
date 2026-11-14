@@ -7,6 +7,8 @@ This release provides the schema-4 C1 route: OpenMolcas monomer CAS, optional si
 Preparation uses CPU; stage 05 defaults to CPU and supports an explicitly installed GPU environment selected with `runtime.use_gpu: true`.
 PySCF DFCD is a reserved adapter with structure templates; its full numerical workflow is unavailable.
 
+For one molecule with multiple state wavefunctions, see [the ethene monomer definition](00_system_define/ethene_monomer.yaml) and the single-molecule tutorial section.
+
 ```text
 00_system_define/       Complete independent YAML definitions, XYZ and user seeds
   templates/            Editable calculation inputs

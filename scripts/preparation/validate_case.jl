@@ -1,3 +1,7 @@
+# File: scripts/preparation/validate_case.jl
+# Purpose: Validate schema-4 manifests and report the planned preparation tasks.
+# SPDX-License-Identifier: Apache-2.0
+
 # validate_case.jl — authoritative AHPC-NOCI case manifest validation and planning report.
 #
 # Usage: julia --project <NOCI> scripts/preparation/validate_case.jl MANIFEST.yaml

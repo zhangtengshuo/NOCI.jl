@@ -1,0 +1,71 @@
+# 一个分子、两个 singlet MEBF；沿用 00-05 流程和 RICD 因子积分。
+schema_version: 4
+project: ethene_monomer
+method: ahpc_noci                      # 本标准只使用 AHPC-NOCI。
+
+geometry:
+  aggregate: geometry/ethene_GS0.xyz     # 只用于定义摆放位置，单位 Angstrom。
+
+cas:
+  backend: openmolcas                  # CAS 和积分后端独立声明；本版只执行 OpenMolcas 配套路线。
+  integral_method: ricd               # 单体 CAS 的积分近似独立于 04；CD 示例只更换聚集体积分。
+  generation_threshold: 1.0e-4        # RICD 原子辅助基生成阈值。
+  basis: CC-PVDZ                      # 用户种子 RasOrb 必须与此基组、单体 XYZ、AO 顺序匹配。
+
+caspt2:
+  enabled: true                       # 默认开启；设 false 可关闭。PySCF CASPT2 适配器尚未实现。
+  ipea_shift: 0.0                     # 单位 Eh，明确写出以避免软件默认值变化。
+  imaginary_shift: 0.2                # 单位 Eh。
+  max_iterations: 80
+
+molecules:
+  f:                                  # f 是用户声明的分子种类，不是聚集体中某个位置。
+    symmetry: C1                     # 分子自己的点群；本版只执行 C1。
+    geometries:
+      GS0:                            # 同分子可再定义 GS1 等载体结构，每个结构提供自己的 XYZ 和种子。
+        xyz: geometry/ethene_GS0.xyz
+        initial_orbitals:             # 同分子、同结构、同态共享旋转前的计算；这里只引用用户已有文件。
+          default: orbitals/ethene_ccpvdz_seed.RasOrb # 各态默认种子，逐态条目优先。
+          # S1: orbitals/ethene_s1special.RasOrb # 需要专用种子时取消注释并提供文件。
+    states:                           # 这些是用户提供的 CAS 设定，流程不分析活性空间是否正确。
+      S0: {charge: 0, multiplicity: 1, nactel: 2, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 1 1", rlxroot: 1}
+      S1: {charge: 0, multiplicity: 1, nactel: 2, inactive: 7, ras2: 2, symmetry: 1, ciroot: "1 2; 2", rlxroot: 2}
+
+fragments:
+  f_01: {molecule: f, geometry: GS0, frozen_orbitals: false} # true 自动冻结 core；false 不冻结。
+
+system:
+  charge: 0
+  spin_multiplicity: 1 # 单片段各态的多重度必须与系统一致，没有片段间耦合。
+
+# 第一列是片段编号，后面每列是一个 MEBF；教程使用 f/g/h 加数字编号；_ 两侧可用任意非空字母数字串，不按编号排序。
+mebf_table:
+  - [f_01, S0, S1]
+
+common_orbitals:
+  threshold: 1.0e-5                   # 默认值；单体多态轨道并集保留阈值，与积分生成阈值是两回事。
+
+integrals:
+  backend: openmolcas
+  method: ricd                      # ricd：原子 aCD/acCD 辅助基；cd：分子 ERI Cholesky。
+  generation_threshold: 1.0e-4        # ricd 是原子辅助基生成阈值，cd 才是分子 ERI CD 阈值。
+
+templates:                            # 流程内用户模板优先；删掉本块仍自动查找同名本地模板，再回退安装默认。
+  cas: templates/openmolcas/cas.in
+  caspt2: templates/openmolcas/caspt2.in
+  fragment_reference: templates/openmolcas/fragment_reference.in
+  aggregate_reference: templates/openmolcas/aggregate_reference.in
+  integrals: templates/openmolcas/integrals_ricd.in
+
+screening:
+  tau_ci: 1.0e-5
+  tau_ci_offdiagonal: 1.0e-5
+
+runtime:                              # 标准流程固定 CPU；不要求 CUDA、CondaPkg 或 MicroMamba.jl。
+  threads: 1
+  blas_threads: 1
+  scratch_mb: 8                       # NOCI 分块收缩的工作区预算，不是总内存上限。
+  heap_size_hint_mb: 512              # Julia GC 提示，不是总内存上限。
+
+output:
+  checkpoint: true

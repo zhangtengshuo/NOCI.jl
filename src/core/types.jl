@@ -31,12 +31,12 @@ Abstract supertype for the two public NOCI algorithms.
 abstract type NOCIAlgorithm end
 
 """
-    DPNOCI()
+    GronorNOCI()
 
-Select determinant-pair NOCI with conventional packed `.two` electron-repulsion integrals.
+Select GronOR NOCI with conventional packed `.two` electron-repulsion integrals.
 The selector stores no mutable state and does not itself allocate host or device memory.
 """
-struct DPNOCI <: NOCIAlgorithm end
+struct GronorNOCI <: NOCIAlgorithm end
 
 """
     AHPCBranch

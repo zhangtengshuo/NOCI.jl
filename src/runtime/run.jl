@@ -65,7 +65,7 @@ end
 Execute one production NOCI calculation with real-time `.sec` progress, a scientific `.out` containing scalar pairwise/full-multistate couplings, atomic checkpoint/restart, a self-contained matrix snapshot, baseline CASPT2 scalar shifts, and final atomic JSON.
 A run that appends to existing `.sec`/`.out` files writes one compact restart header instead of repeating the banner and input manifest, so each output file carries them exactly once.
 When `test_mode=true`, additional progress-only events are emitted to `.sec` and stdout without changing scientific inputs, screening, CUDA topology, arithmetic, reduction order, or checkpoint semantics.
-Scientific sources remain read-only, all reported energies use the integral unit, DP checkpoint batching never changes pair traversal or reduction order, CUDA use follows `runtime`, scalar coupling reporting performs only host postprocessing of completed matrices, and an existing final JSON is never overwritten.
+Scientific sources remain read-only, all reported energies use the integral unit, G-NOCI checkpoint batching preserves pair traversal and reduction order, CUDA use follows `runtime`, scalar coupling reporting postprocesses completed matrices on the host, and an existing final JSON is never overwritten.
 """
 function run_noci(
     input::NOCIInput;

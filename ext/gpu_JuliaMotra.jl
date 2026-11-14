@@ -1,3 +1,7 @@
+# File: ext/gpu_JuliaMotra.jl
+# Purpose: Provide GPU workspaces for JuliaMotra integral transformations.
+# SPDX-License-Identifier: Apache-2.0
+
 
 """
     JuliaMOTRAGPUWorkspace(orbitals, n_ao, n_orbitals, batch_size, gpu_device)

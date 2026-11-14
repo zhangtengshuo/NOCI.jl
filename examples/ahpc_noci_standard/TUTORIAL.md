@@ -7,6 +7,37 @@ The executable route is C1, CPU, OpenMolcas monomer CAS and OpenMolcas RICD/CD f
 PySCF DFCD is reserved; solver templates and structure review do not certify its numerical adapter.
 Validate real calculations in a user-owned copy rather than writing products into source directories.
 
+## Single-molecule NOCI
+
+Use [ethene_monomer.yaml](00_system_define/ethene_monomer.yaml) for one ethene molecule with two singlet MEBFs, S0 and S1.
+The input uses the same schema and stages 00–05:
+
+```yaml
+geometry:
+  aggregate: geometry/ethene_GS0.xyz
+fragments:
+  f_01: {molecule: f, geometry: GS0, frozen_orbitals: false}
+system:
+  charge: 0
+  spin_multiplicity: 1
+mebf_table:
+  - [f_01, S0, S1]
+```
+
+This excerpt supplements the complete molecule/CAS/template definition in the example; it is not a standalone input.
+A single fragment can supply multiple independently optimized state orbital sets; keep placement and CommonOrb preparation so all wavefunctions and integrals use the same common space.
+Only the original highest-spin-projection CI is used, with an empty coupling chain and unit coupling coefficient; its full input CI is normalized before collection-wide pruning, without a fragment-product cutoff or subsequent renormalization.
+Both G-NOCI and AHPC-NOCI use this shared MEBF construction for direct numerical inputs; the standard preparation YAML continues to select AHPC-NOCI with RICD/CD factors.
+All MEBFs must conserve electron count and use the same declared total spin and per-fragment inactive/active dimensions; supporting one molecule does not mix charge or spin sectors.
+CASPT2 remains enabled by default, and the monomer example reuses the supplied ethene geometry and RasOrb seed.
+
+In an initialized user case, review with the first command; the second command starts real calculations:
+
+```bash
+noci-prepare plan 00_system_define/ethene_monomer.yaml
+bash run_all.sh ethene_monomer.yaml
+```
+
 ## 1. What users supply
 
 Complete required monomer geometry optimization, frequency checks and aggregate structure preparation beforehand; these are outside stages 00–05.

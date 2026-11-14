@@ -17,7 +17,7 @@
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
  File:            src/runtime/checkpoint.jl
- Purpose:         Versioned DP cumulative-prefix and two-level AHPC resume checkpoints.
+ Purpose:         Versioned G-NOCI cumulative-prefix and two-level AHPC resume checkpoints.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0
  Original author: Teng-Shuo Zhang
@@ -130,9 +130,11 @@ function build_scientific_signature(
     else
         (source=:files,)
     end
+    # Keep the pre-rename scientific fingerprint for existing G-NOCI checkpoints.
+    signature_algorithm = input.algorithm isa GronorNOCI ? "dp-noci" : algorithm_name(input.algorithm)
     payload = (
         checkpoint_version=NOCI_CHECKPOINT_VERSION,
-        algorithm=algorithm_name(input.algorithm),
+        algorithm=signature_algorithm,
         branch=branch,
         backend=backend_name(input.backend),
         floating_type=string(T),
@@ -219,7 +221,7 @@ function open_checkpoint_session(
 )
     options.enabled || throw(ArgumentError("cannot open a disabled checkpoint session"))
     directory = abspath(options.directory)
-    mkpath(joinpath(directory, "dp"))
+    mkpath(joinpath(directory, "gronor_noci"))
     mkpath(joinpath(directory, "ahpc"))
     lock_io = open(joinpath(directory, "writer.lock"), "a+")
     lock_status = ccall(:flock, Cint, (Cint, Cint), Base.fd(lock_io), 6)
@@ -231,7 +233,7 @@ function open_checkpoint_session(
         directory,
         String(scientific_signature),
         String(execution_signature),
-        options.dp_checkpoint_pairs,
+        options.gronor_noci_checkpoint_pairs,
         options.ahpc_checkpoint_blocks,
         lock_io,
         commit_hook,
@@ -299,10 +301,27 @@ function _state_pair_checkpoint_path(
     right_mebf::Integer;
     inflight::Bool=false,
 )
-    algorithm in (:dp, :ahpc) || throw(ArgumentError("checkpoint algorithm must be :dp or :ahpc"))
+    algorithm in (:gronor_noci, :ahpc) || throw(ArgumentError("checkpoint algorithm must be :gronor_noci or :ahpc"))
     left_mebf >= 1 && right_mebf >= 1 || throw(ArgumentError("state-pair indices must be positive"))
     prefix = inflight ? "inflight" : "complete"
     return joinpath(session.directory, String(algorithm), @sprintf("%s_%04d_%04d.jld2", prefix, left_mebf, right_mebf))
+end
+
+"""
+    _checkpoint_read_path(session, algorithm, left_mebf, right_mebf; inflight=false)
+
+Read the new G-NOCI checkpoint path, falling back to the legacy `dp/` directory.
+"""
+function _checkpoint_read_path(
+    session::CheckpointSession, algorithm::Symbol,
+    left_mebf::Integer, right_mebf::Integer; inflight::Bool=false,
+)
+    path = _state_pair_checkpoint_path(session, algorithm, left_mebf, right_mebf; inflight)
+    if algorithm === :gronor_noci && !isfile(path)
+        legacy = joinpath(session.directory, "dp", basename(path))
+        return isfile(legacy) ? legacy : path
+    end
+    return path
 end
 
 """
@@ -317,10 +336,12 @@ function load_state_pair_checkpoint(
     left_mebf::Integer,
     right_mebf::Integer,
 )
-    path = _state_pair_checkpoint_path(session, algorithm, left_mebf, right_mebf)
+    path = _checkpoint_read_path(session, algorithm, left_mebf, right_mebf)
     isfile(path) || return nothing
     data = _load_checkpoint_payload(path, session)
     String(data["kind"]) == "completed-state-pair" || throw(ArgumentError("unexpected checkpoint kind in $path"))
+    valid_algorithms = algorithm === :gronor_noci ? ("gronor_noci", "dp") : ("ahpc",)
+    String(data["algorithm"]) in valid_algorithms || throw(ArgumentError("checkpoint algorithm mismatch in $path"))
     Int(data["left_mebf"]) == left_mebf || throw(ArgumentError("checkpoint left state mismatch in $path"))
     Int(data["right_mebf"]) == right_mebf || throw(ArgumentError("checkpoint right state mismatch in $path"))
     return data
@@ -377,10 +398,12 @@ function load_inflight_checkpoint(
     left_mebf::Integer,
     right_mebf::Integer,
 )
-    path = _state_pair_checkpoint_path(session, algorithm, left_mebf, right_mebf; inflight=true)
+    path = _checkpoint_read_path(session, algorithm, left_mebf, right_mebf; inflight=true)
     isfile(path) || return nothing
     data = _load_checkpoint_payload(path, session)
     String(data["kind"]) == "cumulative-prefix" || throw(ArgumentError("unexpected inflight checkpoint kind in $path"))
+    valid_algorithms = algorithm === :gronor_noci ? ("gronor_noci", "dp") : ("ahpc",)
+    String(data["algorithm"]) in valid_algorithms || throw(ArgumentError("checkpoint algorithm mismatch in $path"))
     Int(data["left_mebf"]) == left_mebf || throw(ArgumentError("inflight left state mismatch in $path"))
     Int(data["right_mebf"]) == right_mebf || throw(ArgumentError("inflight right state mismatch in $path"))
     return data

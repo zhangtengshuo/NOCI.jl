@@ -1,3 +1,7 @@
+# File: scripts/preparation/case_driver.jl
+# Purpose: Run the manifest-driven NOCI preparation stages and backend tasks.
+# SPDX-License-Identifier: Apache-2.0
+
 # case_driver.jl — manifest-driven driver for the standard AHPC-NOCI case chain.
 #
 # Usage: julia --project <NOCI> scripts/preparation/case_driver.jl STAGE MANIFEST.yaml [MODE]

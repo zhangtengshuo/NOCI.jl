@@ -1,3 +1,7 @@
+# File: scripts/preparation/standard_manifest.jl
+# Purpose: Define species, geometry, and state metadata for the standard workflow.
+# SPDX-License-Identifier: Apache-2.0
+
 # Declarative species/geometry registry for the recommended C1 workflow.
 # Numerical preparation remains in case_driver.jl and its shared libraries.
 

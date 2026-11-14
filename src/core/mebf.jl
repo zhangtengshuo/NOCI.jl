@@ -291,7 +291,10 @@ function _coupling_targets(
 )
     n_states >= 1 || throw(ArgumentError("at least one fragment state is required"))
     total_spin_multiplicity >= 1 || throw(ArgumentError("total_spin_multiplicity must be positive"))
-    n_states == 1 && return Int[]
+    if n_states == 1
+        isempty(coupling_multiplicities) || throw(ArgumentError("single-fragment MEBFs require an empty coupling chain"))
+        return Int[]
+    end
     if length(coupling_multiplicities) == n_states - 2
         return vcat(Int.(coupling_multiplicities), Int(total_spin_multiplicity))
     end

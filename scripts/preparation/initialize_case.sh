@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/initialize_case.sh
+# Purpose: Create the standard case directory layout and initial inputs.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 
 (( $# == 1 )) || { echo "usage: initialize_case.sh NEW_CASE_DIRECTORY" >&2; exit 2; }

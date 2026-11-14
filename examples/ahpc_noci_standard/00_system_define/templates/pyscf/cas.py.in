@@ -1,3 +1,7 @@
+# File: examples/ahpc_noci_standard/00_system_define/templates/pyscf/cas.py.in
+# Purpose: Template for a reserved PySCF DF-CASSCF state calculation.
+# SPDX-License-Identifier: Apache-2.0
+
 # Native PySCF DF-CASSCF solver input; the workflow adapter is still reserved.
 # Raw solver output must be converted to the standard state bundle by that adapter.
 import numpy as np

@@ -17,35 +17,35 @@
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
  File:            src/runtime/evaluate.jl
- Purpose:         High-level evaluate(input) dispatch to the production AHPC and conventional DP paths.
+ Purpose:         High-level evaluate(input) dispatch to the production AHPC and conventional G-NOCI paths.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0
  Original author: Teng-Shuo Zhang
 =#
 
 """
-    validate_backend(algorithm::DPNOCI, backend::PackedTwoERI)
+    validate_backend(algorithm::GronorNOCI, backend::PackedTwoERI)
 
-Validate the supported DP-NOCI/conventional-ERI combination and return `nothing` before file loading.
+Validate the supported G-NOCI/conventional-ERI combination and return `nothing` before file loading.
 """
-validate_backend(::DPNOCI, ::PackedTwoERI) = nothing
+validate_backend(::GronorNOCI, ::PackedTwoERI) = nothing
 
 """
-    validate_backend(algorithm::DPNOCI, backend::FactorizedERI{ERIFactorBundleSource})
+    validate_backend(algorithm::GronorNOCI, backend::FactorizedERI{ERIFactorBundleSource})
 
-Reject DP-NOCI with directly supplied factorized ERIs by raising `UnsupportedERIBackend` before large allocation or GPU initialization.
+Reject G-NOCI with directly supplied factorized ERIs by raising `UnsupportedERIBackend` before large allocation or GPU initialization.
 """
-function validate_backend(algorithm::DPNOCI, backend::FactorizedERI{ERIFactorBundleSource})
+function validate_backend(algorithm::GronorNOCI, backend::FactorizedERI{ERIFactorBundleSource})
     throw(UnsupportedERIBackend(algorithm_name(algorithm), backend_name(backend)))
 end
 
 """
-    validate_backend(algorithm::DPNOCI, backend::FactorizedERI{SewardMOTRASource})
+    validate_backend(algorithm::GronorNOCI, backend::FactorizedERI{SewardMOTRASource})
 
-Allow a SEWARD source for DP-NOCI because evaluation explicitly materializes physical four-index ERIs before the DP kernel.
+Allow a SEWARD source for G-NOCI because evaluation explicitly materializes physical four-index ERIs before the G-NOCI kernel.
 The function performs no source loading, OpenMolcas initialization, host allocation, or CUDA work.
 """
-validate_backend(::DPNOCI, ::FactorizedERI{SewardMOTRASource}) = nothing
+validate_backend(::GronorNOCI, ::FactorizedERI{SewardMOTRASource}) = nothing
 
 """
     validate_backend(algorithm::AHPCNOCI, backend::PackedTwoERI)
@@ -182,7 +182,7 @@ end
     _evaluate_noci(input; T=Float64, runtime=input.runtime, checkpoint=nothing, progress=nothing)
 
 Execute the shared unshifted NOCI pipeline with optional production progress and restart contexts.
-Scientific inputs remain read-only, returned results are CPU-owned in integral units, optional host-file writes are confined to the supplied contexts, and DP-NOCI rejects direct ERI factor bundles while explicitly materializing an embedded SEWARD source into four-index ERIs.
+Scientific inputs remain read-only, returned results are CPU-owned in integral units, optional host-file writes are confined to the supplied contexts, and G-NOCI rejects direct ERI factor bundles while explicitly materializing an embedded SEWARD source into four-index ERIs.
 """
 function _evaluate_noci(
     input::NOCIInput;
@@ -230,7 +230,7 @@ function _evaluate_noci(
         collect_allocations=runtime.collect_allocations,
     )
     progress_event!(progress, :load_eri_complete; backend=backend_name(input.backend))
-    if input.algorithm isa DPNOCI && integrals isa ERIFactorValues
+    if input.algorithm isa GronorNOCI && integrals isa ERIFactorValues
         conversion_estimate = packed_eri_from_factors_memory(S, integrals.n_orbitals, size(integrals.coefficients, 2); runtime)
         auxiliary_count = size(integrals.coefficients, 2)
         integrals = record_phase!(
@@ -243,8 +243,8 @@ function _evaluate_noci(
         )
         progress_event!(progress, :materialize_four_index_eri_complete; n_orbitals=integrals.n_orbitals)
     end
-    raw = if input.algorithm isa DPNOCI
-        assemble_dp_noci_matrices(basis_functions, one_electron.values, integrals, input.screening; runtime, telemetry, checkpoint, progress)
+    raw = if input.algorithm isa GronorNOCI
+        assemble_gronor_noci_matrices(basis_functions, one_electron.values, integrals, input.screening; runtime, telemetry, checkpoint, progress)
     else
         assemble_ahpc_spin_string_matrices(
             basis_functions,
@@ -266,7 +266,7 @@ function _evaluate_noci(
     return NOCIEvaluationResult(
         input.label,
         algorithm_name(input.algorithm),
-        input.algorithm isa DPNOCI ? "direct-determinant-pair" : branch_name(input.algorithm.branch),
+        input.algorithm isa GronorNOCI ? "direct-determinant-pair" : branch_name(input.algorithm.branch),
         backend_name(input.backend),
         raw,
         normalized,
@@ -279,7 +279,7 @@ end
     evaluate(input::NOCIInput; T=Float64, runtime=input.runtime)
 
 Execute one repository-local unshifted NOCI calculation from validated input through problem/integral loading, matrix assembly, normalization, and generalized eigensolution.
-Inputs and source files are read-only, results and telemetry are CPU-owned, DP-NOCI and production AHPC-NOCI support their declared CPU/CUDA paths, direct factor-bundle DP requests fail before loading, and only an explicitly selected embedded SEWARD source initializes the configured ExactDenEmb OpenMolcas library against task-owned staging.
+Inputs and source files are read-only, results and telemetry are CPU-owned, G-NOCI and production AHPC-NOCI support their declared CPU/CUDA paths, direct factor-bundle G-NOCI requests fail before loading, and only an explicitly selected embedded SEWARD source initializes the configured ExactDenEmb OpenMolcas library against task-owned staging.
 """
 function evaluate(
     input::NOCIInput;

@@ -1,4 +1,7 @@
 #!/usr/bin/env julia
+# File: tools/seward_to_factor_bundle.jl
+# Purpose: Convert SEWARD factor exports into a validated NOCI factor bundle.
+# SPDX-License-Identifier: Apache-2.0
 
 using NOCI
 using YAML

@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/polynomial_spin_pair_cuda_runtime.jl
+ File:            src/runtime/cuda_resources/polynomial_spin_pair_cuda_runtime.jl
  Purpose:         Bounded CPU staging and double host buffers for one polynomial Hessian-pair CUDA worker.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

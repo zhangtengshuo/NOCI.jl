@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/precontraction_cuda.jl
+ File:            src/runtime/cuda_resources/precontraction_cuda.jl
  Purpose:         CUDA AHPC precontraction: projected ERI-factor shards and streamed conventional ERI tiles.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

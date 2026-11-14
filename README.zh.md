@@ -2,91 +2,96 @@
 
 [English](README.md)
 
-NOCI.jl 用 Julia 实现行列式对 NOCI（DP-NOCI）与活性 Hamiltonian 预收缩 NOCI（AHPC-NOCI）。
-程序从行列式、轨道和积分数据计算原始及重叠归一化的 $S/H_1/H_2/H$ 矩阵，并求解对称广义 NOCI 本征值问题。
-本日历版本提供 CPU 执行与可选 GPU 加速，版本权威是 `Project.toml`，CLI、科学输出和 JSON 一致报告完整版本。
+**NOCI.jl** 是一个基于分子片段波函数的非正交组态相互作用（nonorthogonal configuration interaction, NOCI）Julia 软件包。 当前方法开发由浙江工业大学化学工程学院的张腾烁和北京师范大学化学学院的崔刚龙教授主导。
 
-## 安装和准备
+程序从片段态构建分子电子基函数（molecular electronic basis functions, MEBFs），计算基函数之间的重叠矩阵元和哈密顿矩阵元，并求解相应的广义本征值问题。
 
-先读 [安装指南](Install/README.zh.md)，再使用 [schema-4 标准流程](examples/ahpc_noci_standard/TUTORIAL.zh.md)。
-默认安装包括独立编号的 CAS/积分后端 OpenMolcas4NOCI 26.06.2，适配由 `OpenMolcasCompatibility.toml` 声明和检查。
-已有兼容积分数据时可直接计算，无需调用 CAS／积分后端。
+软件包含两种 NOCI 实现：本项目发展的 **AHPC-NOCI**，以及对 GronOR 原始 NOCI-F 方法进行 Julia 重写的 **G-NOCI**。
+
+## 方法
+
+### AHPC-NOCI
+
+AHPC-NOCI 将**活性哈密顿量预收缩（active-Hamiltonian precontraction, AHPC）**、**多项式行列式导数收缩（polynomial determinant-derivative contraction, PDDC）**和**自旋字符串对复用（spin-string-pair reuse）**结合起来。这些技术避免了对大维度重叠矩阵的重复处理，并消除了余子式计算中的 SVD 分支。与传统 NOCI-F 工作流程相比，AHPC-NOCI 的计算性能提升了**四个数量级以上**。
+
+### G-NOCI
+
+G-NOCI 是对 GronOR 原始行列式对 NOCI-F 方法的 Julia 重写。该实现针对**单节点 CPU/GPU 并行计算**进行了高度性能优化。
+
+G-NOCI 保留原方法直接的行列式对计算形式。其计算结构直接、清晰，因此将作为后续新功能开发的首选实现基础，也作为检验 AHPC-NOCI 正确性的参照实现。
+
+## 安装与准备
+
+请先阅读[安装指南](Install/README.zh.md)，再按照 [schema-4 标准流程](examples/ahpc_noci_standard/TUTORIAL.zh.md)准备计算。
+
+默认安装包含 OpenMolcas4NOCI 26.06.2，作为 CAS 和积分计算后端。该后端独立管理版本，并通过 `OpenMolcasCompatibility.toml` 检查兼容性。已有兼容积分数据时，也可以直接用于 NOCI 计算。
 
 ```bash
+# 查看安装计划
 bash Install/install.sh --plan
-# 下一行会安装并执行小型安装检查。
+
+# 安装 CPU 环境和 OpenMolcas 后端
 bash Install/install.sh --execute
 ```
 
-推荐 C1 流程共享原始单体 CAS 任务，逐实例旋转轨道，独立构造 CommonOrb 并导入 RICD/CD 因子供 AHPC-NOCI 使用。
-单体所选根的 CASPT2 默认开启，可显式关闭。
-PySCF DFCD 和混搭后端仅有 [预留契约](examples/ahpc_noci_standard/BACKEND_CONTRACT.zh.md)，本版没有可执行的完整适配器。
-科学运行不安装、下载或求解包。
+推荐的 C1 工作流程会复用单体 CAS 任务，对各片段实例进行旋转，构建相应的 CommonOrb 基组，并为 AHPC-NOCI 导入 RICD 或分子 Cholesky 分解（CD）积分因子。选定单体根的 CASPT2 计算默认开启，也可以显式关闭。
 
-## 算法和数据
+## 积分数据
 
-`DPNOCI` 对物理四指标 ERI 求值，可直接读取 packed `.two`；显式指定的嵌入 SEWARD 来源先在内存预检后物化四指标积分。
-DP-NOCI 拒绝直接输入因子包。
-`AHPCNOCI` 结合活性 Hamiltonian 预收缩、规范自旋字符串对复用、稀疏收缩和 occupied-spin 互补余子式。
-其单一生产路径支持 packed 四指标或分子 CD、度量白化 RICD 的单位度量 Gram 因子。
-支持查询和 polynomial/带证书 LU 余子式仍是类型化算法选项，预收缩是 AHPC 的基础，不是第三种方法。
-大规模常规四指标计算需要主机内存预检；推荐因子流程不形成完整四指标矩阵。
+- **G-NOCI** 使用 packed `.two` 文件中的物理四指标电子排斥积分计算行列式对矩阵元。也可以通过显式配置的 SEWARD 数据源生成四指标积分。
+- **AHPC-NOCI** 支持 packed 四指标积分，也支持分子 Cholesky 分解（CD）和 resolution-of-identity Cholesky decomposition（RICD）因子化积分。
+- OpenMolcas SEWARD 导出的可移植 CHH5 数据经过校验后，会被变换到实际使用的 CommonOrb 基组中，并计入冻结芯层贡献。
+- 标准因子化积分输入使用 `integrals.backend: factorized`。
 
-可移植 SEWARD CHH5 经过验证后，直接变换到实际公共轨道基并处理冻结核心，HDF5 导入器不调用共享库。
-原嵌入 RunFile/SEWARD Julia-MOTRA 仍是专家输入路线，使用共享库时必须符合声明的后端适配。
-新输入使用 `integrals.backend: factorized`，旧 `cholesky` 拼写和版本 1/2 因子包仍可读。
-RICD 原子辅助基阈值与分子 CD 阈值在来源记录中保持不同含义。
-导入器支持 CHH5 1.0 和显式来源 1.1，不推断旧数据未知来源。
-标准算例生成 `factors.jld2`，独立转换工具保留各自说明的前缀命名。
+标准算例生成 `factors.jld2`。输入细节见[标准流程教程](examples/ahpc_noci_standard/TUTORIAL.zh.md)和[后端接口约定](examples/ahpc_noci_standard/BACKEND_CONTRACT.zh.md)。
 
-## 命令
+## 计算运行
+
+标准教程介绍了片段态准备、片段放置、CommonOrb 基组构建、积分准备以及 NOCI 矩阵组装。
 
 ```bash
+# 查看已安装版本
 noci --version
-noci run INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT
-noci override SNAPSHOT.jld2 OVERRIDE.yaml
+
+# 创建并检查计算案例
 noci-prepare init NEW_CASE_DIRECTORY
 noci-prepare check MANIFEST.yaml
 noci-prepare plan MANIFEST.yaml
+
+# 执行 NOCI 计算
+noci run INPUT.yaml OUTPUT_DIRECTORY OUTPUT_ROOT
+
+# 根据覆盖参数重新评估已保存的计算
+noci override SNAPSHOT.jld2 OVERRIDE.yaml
 ```
 
-生产输出保留未修正与相关能修正的矩阵/能量、标量态耦合、来源、快照和可选续算断点。
-真实计算命令和输入假设见 [准备指南](docs/tutorials/AHPC_NOCI_Preparation_and_Run.zh.md) 与 [标准教程](examples/ahpc_noci_standard/TUTORIAL.zh.md)。
-产品不分发开发测试、性能输出、机器配置和发布管理材料。
+完整计算流程和输入要求见[准备与运行指南](docs/tutorials/AHPC_NOCI_Preparation_and_Run.zh.md)。
 
-## 科学引用
+## GPU 计算
 
-If you use NOCI.jl — through either the AHPC-NOCI or the DP-NOCI module — you must cite the paper that introduced the reduced common molecular orbital basis (`COMMONORB`), the foundation of the NOCI-F method on which both algorithms rest:
-
-> R. K. Kathir, C. de Graaf, R. Broer, and R. W. A. Havenith, "Reduced Common Molecular Orbital Basis for Nonorthogonal Configuration Interaction", *J. Chem. Theory Comput.* **16**, 2941–2951 (2020), doi:[10.1021/acs.jctc.9b01144](https://doi.org/10.1021/acs.jctc.9b01144)
-
-## 来源和致谢
-
-The determinant-pair method (DP-NOCI) originates from the GronOR program:
-
-> T. P. Straatsma, R. Broer, A. Sanchez-Mansilla, C. Sousa, and C. de Graaf, "GronOR: Scalable and Accelerated Nonorthogonal Configuration Interaction for Molecular Fragment Wave Functions", *J. Chem. Theory Comput.* **18**, 3549–3565 (2022), doi:[10.1021/acs.jctc.2c00266](https://doi.org/10.1021/acs.jctc.2c00266)
-
-GronOR ([gitlab.com/gronor/gronor](https://gitlab.com/gronor/gronor)) is copyright of the University of Groningen and is distributed under the Apache License 2.0, the same license as this package. NOCI.jl rewrites the method in Julia with extensive single-node performance optimizations, keeping most functionality and settings consistent with GronOR; the provenance is also declared in the header of every `src/algorithms/dp_noci/` file.
-
-The fragment correlation-energy (CASPT2) shift with Gallup-Norbeck weighting, implemented in `src/core/correlation_shifts.jl`, likewise originates from GronOR (routine `gronor_correlation_energy`, Kathir, Havenith, and de Graaf, 2019, published in the paper above) and is rewritten in Julia with both the GronOR Fortran and the original paper weight conventions.
-
-## 可选 GPU 安装
-
-默认安装 CPU NOCI 与 OpenMolcas4NOCI，不安装 CUDA。
-增加 `--withgpu` 才安装独立锁定的 GPU 环境，其中包括 CUDA.jl 5.11.0 和 YAML 等准备流程依赖。
+默认安装提供 CPU 计算环境。如需安装可选 CUDA 环境，执行：
 
 ```bash
 bash Install/install.sh --execute --withgpu
+
+# 也可以指定 CUDA runtime
 bash Install/install.sh --execute --withgpu --cuda-runtime 12.8
 ```
 
-未指定 `--execute` 时，安装器只打印计划。
-`--cuda-runtime` 为可选参数，必须与 `--withgpu` 一起使用，所选 runtime 需要兼容 NVIDIA 设备与驱动。
-CPU 与 GPU 环境各自声明所需依赖，不从账户默认 Julia 环境加载包。
-机器专属的 CUDA 偏好只写入安装目录。
-安装记录保存所选环境，激活前检查 GPU 扩展和一个小型 Float64 设备运算。
+标准计算输入默认使用 CPU。若要在 NOCI 矩阵组装阶段（stage 05）使用已安装的 GPU 环境，在 stage-00 manifest 中设置 `runtime.use_gpu: true`。通过 `runtime.gpu_device` 或 `runtime.gpu_devices` 选择 GPU。Julia 线程数必须是所选 GPU 数量的整数倍。CAS、轨道和积分准备阶段使用 CPU。
 
-标准计算输入仍默认为 CPU。
-在阶段 00 的 manifest 设置 `runtime.use_gpu: true`，阶段 05 才使用已安装的 GPU 环境；`runtime.gpu_device` 或 `runtime.gpu_devices` 选择设备。
-Julia 线程数必须为所选 GPU 数量的整数倍。
-CAS、轨道和积分准备使用 CPU，阶段 05 子进程保留所选 Julia 环境。
+## 输出
+
+NOCI.jl 保存重叠矩阵、哈密顿矩阵、相关能修正前后的能量、态间耦合、积分来源信息和计算快照。矩阵组装过程可以启用重启检查点，以便续算。
+
+## 引用
+
+**凡使用 NOCI.jl 进行计算并发表相关结果，都必须引用 CommonOrb 论文，无论使用 AHPC-NOCI 还是 G-NOCI。** 两种实现均采用了 NOCI-F 框架所依赖的约化公共分子轨道基组。
+
+> R. K. Kathir, C. de Graaf, R. Broer, and R. W. A. Havenith, “Reduced Common Molecular Orbital Basis for Nonorthogonal Configuration Interaction,” *Journal of Chemical Theory and Computation* **16**, 2941–2951 (2020). [https://doi.org/10.1021/acs.jctc.9b01144](https://doi.org/10.1021/acs.jctc.9b01144)
+
+使用 **G-NOCI** 进行计算时，还应引用介绍其 NOCI-F 方法的 GronOR 原始论文。
+
+> T. P. Straatsma, R. Broer, A. Sanchez-Mansilla, C. Sousa, and C. de Graaf, “GronOR: Scalable and Accelerated Nonorthogonal Configuration Interaction for Molecular Fragment Wave Functions,” *Journal of Chemical Theory and Computation* **18**, 3549–3565 (2022). [https://doi.org/10.1021/acs.jctc.2c00266](https://doi.org/10.1021/acs.jctc.2c00266)
+
+GronOR 原始项目见 [gronor/gronor](https://gitlab.com/gronor/gronor)。

@@ -1,3 +1,7 @@
+# File: Install/support/cpu_smoke.jl
+# Purpose: Check CPU-only package loading and record the installation result.
+# SPDX-License-Identifier: Apache-2.0
+
 using NOCI
 using YAML
 using TOML

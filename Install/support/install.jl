@@ -1,3 +1,7 @@
+# File: Install/support/install.jl
+# Purpose: Install and verify release payloads and backend components.
+# SPDX-License-Identifier: Apache-2.0
+
 using TOML
 using SHA
 using Tar

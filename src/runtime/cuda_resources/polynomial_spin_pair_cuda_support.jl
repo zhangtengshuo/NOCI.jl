@@ -16,7 +16,7 @@
 #=
  NOCI.jl — Nonorthogonal Configuration Interaction in Julia
 
- File:            src/algorithms/ahpc_noci/polynomial_spin_pair_cuda_support.jl
+ File:            src/runtime/cuda_resources/polynomial_spin_pair_cuda_support.jl
  Purpose:         Shared constants, safety reserves, and helpers for the polynomial spin-pair CUDA kernels.
  Copyright:       (C) 2026 Teng-Shuo Zhang
  SPDX-License-Identifier: Apache-2.0

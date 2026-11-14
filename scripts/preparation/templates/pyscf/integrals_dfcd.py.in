@@ -1,3 +1,7 @@
+# File: scripts/preparation/templates/pyscf/integrals_dfcd.py.in
+# Purpose: Template for a reserved PySCF AO density-fitting factor export.
+# SPDX-License-Identifier: Apache-2.0
+
 # Native AO DF/CDERI generation input; the standard workflow adapter is reserved.
 # The adapter must transform these blocks to its own CommonOrb, apply frozen-core
 # terms and export NOCI factor provenance; this raw HDF5 is not a NOCI factor bundle.

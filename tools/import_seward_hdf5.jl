@@ -1,4 +1,7 @@
 #!/usr/bin/env julia
+# File: tools/import_seward_hdf5.jl
+# Purpose: Validate and import portable SEWARD HDF5 data using the NOCI API.
+# SPDX-License-Identifier: Apache-2.0
 
 using NOCI
 

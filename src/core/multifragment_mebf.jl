@@ -172,14 +172,17 @@ function _spin_sector_ranges64(expansion::PackedSpinMicrostateExpansion64)
 end
 
 """
-    _spin_microstates64(expansion, spin_multiplicity)
+    _spin_microstates64(expansion, spin_multiplicity; highest_projection_only=false)
 
 Generate all spin-projection sectors from one highest-projection determinant expansion using packed alpha/beta masks and repeated exact spin lowering over at most 64 active orbitals.
 The input is read-only, each generated sector is normalized independently as in the established dimer builder, duplicate lowered occupations are deterministically accumulated on CPU, no occupation strings/CUDA work occur, and impossible multiplicities raise `ArgumentError`.
+With `highest_projection_only=true`, retain only the normalized input sector and leave lower-sector counts zero; this avoids unnecessary spin lowering for states used exclusively in single-fragment MEBFs.
+The returned `PackedSpinMicrostateExpansion64` stores dimensionless CI coefficients, spin multiplicities and occupation counts on CPU.
 """
 function _spin_microstates64(
     expansion::DeterminantExpansion{T},
-    spin_multiplicity::Integer,
+    spin_multiplicity::Integer;
+    highest_projection_only::Bool=false,
 ) where {T<:AbstractFloat}
     multiplicity = Int(spin_multiplicity)
     multiplicity >= 1 || throw(ArgumentError("spin_multiplicity must be positive"))
@@ -194,6 +197,10 @@ function _spin_microstates64(
     all_coefficients = copy(current_coefficients)
     all_alpha = copy(current_alpha)
     all_beta = copy(current_beta)
+
+    highest_projection_only && return PackedSpinMicrostateExpansion64(
+        all_coefficients, all_alpha, all_beta, sector_counts, multiplicity, n_active,
+    )
 
     for sector in 2:multiplicity
         coefficient_by_key = Dict{UInt128,T}()
@@ -241,16 +248,18 @@ function _spin_microstates64(
 end
 
 """
-    _prepare_packed_fragment64(expansion, spin_multiplicity)
+    _prepare_packed_fragment64(expansion, spin_multiplicity; highest_projection_only=false)
 
 Build the immutable 64-active packed microstate cache for one fragment determinant expansion and stable sector-local magnitude orders used by exact multifragment screening.
 The determinant expansion is read-only, returned arrays are CPU-owned, no molecular products/CUDA state are created, and invalid spin metadata propagates from `_spin_microstates64`.
+Counts and spin multiplicities are dimensionless; `highest_projection_only` omits unused lowered sectors for a monomer without screening its input coefficients.
 """
 function _prepare_packed_fragment64(
     expansion::DeterminantExpansion{T},
-    spin_multiplicity::Integer,
+    spin_multiplicity::Integer;
+    highest_projection_only::Bool=false,
 ) where {T<:AbstractFloat}
-    microstates = _spin_microstates64(expansion, spin_multiplicity)
+    microstates = _spin_microstates64(expansion, spin_multiplicity; highest_projection_only)
     sector_ranges = _spin_sector_ranges64(microstates)
     sorted_indices = [sort!(collect(range); by=index -> abs(microstates.coefficients[index]), rev=true) for range in sector_ranges]
     maximum_magnitudes = T[isempty(indices) ? zero(T) : abs(microstates.coefficients[first(indices)]) for indices in sorted_indices]
@@ -262,10 +271,21 @@ end
 
 Prepare each fragment state referenced by any MEBF exactly once using the 64-active packed multifragment representation without imposing the legacy dimer-only topology restriction.
 The loaded problem is read-only, returned CPU dictionary entries are owned and treated as immutable, no molecular determinant products/CUDA work occur, and per-fragment active ranks above 64 raise before assembly.
+States used exclusively by single-fragment MEBFs retain only their highest-projection sector; states also used in coupled products retain all sectors, and inconsistent monomer total spins raise before cache allocation.
 """
 function _prepare_fragment_microstate_cache64(problem::NOCIProblemDefinition{T}) where {T<:AbstractFloat}
     referenced_indices = Set{Int}()
+    coupled_indices = Set{Int}()
     for composition in problem.mebfs
+        n_fragments = length(composition.fragment_state_indices)
+        n_fragments >= 1 || throw(ArgumentError("MEBF construction requires at least one fragment state"))
+        if n_fragments == 1
+            state = problem.fragment_states[only(composition.fragment_state_indices)]
+            state.wavefunction.determinants.spin_multiplicity == problem.spin_multiplicity || throw(ArgumentError("single-fragment spin multiplicity must match the system multiplicity"))
+            isempty(composition.coupling_multiplicities) || throw(ArgumentError("single-fragment MEBFs require an empty coupling chain"))
+        else
+            union!(coupled_indices, composition.fragment_state_indices)
+        end
         union!(referenced_indices, composition.fragment_state_indices)
         total_active = sum(active_orbital_count(problem.fragment_states[index].wavefunction.determinants.expansion) for index in composition.fragment_state_indices)
         total_active <= 64 || throw(ArgumentError("multifragment MEBF construction supports at most 64 total active orbitals per MEBF"))
@@ -273,9 +293,29 @@ function _prepare_fragment_microstate_cache64(problem::NOCIProblemDefinition{T})
     cache = Dict{Int,PreparedPackedFragment64{T}}()
     for index in sort!(collect(referenced_indices))
         determinant_data = problem.fragment_states[index].wavefunction.determinants
-        cache[index] = _prepare_packed_fragment64(determinant_data.expansion, determinant_data.spin_multiplicity)
+        cache[index] = _prepare_packed_fragment64(
+            determinant_data.expansion, determinant_data.spin_multiplicity;
+            highest_projection_only=!(index in coupled_indices),
+        )
     end
     return cache
+end
+
+"""
+    _multifragment_coupling_targets(prepared, total_spin_multiplicity, coupling_multiplicities)
+
+Return the complete left-to-right coupling targets for a nonempty prepared MEBF, validating that a single fragment has the requested total spin and an empty coupling chain.
+Inputs are read-only dimensionless spin metadata; only a small CPU integer vector is returned, no determinant/GPU storage is allocated, and empty products or inconsistent spin/coupling metadata raise `ArgumentError`.
+"""
+function _multifragment_coupling_targets(
+    prepared::AbstractVector{<:PreparedPackedFragment64},
+    total_spin_multiplicity::Integer,
+    coupling_multiplicities::AbstractVector{<:Integer},
+)
+    if length(prepared) == 1
+        prepared[1].microstates.spin_multiplicity == total_spin_multiplicity || throw(ArgumentError("single-fragment spin multiplicity must match the system multiplicity"))
+    end
+    return _coupling_targets(length(prepared), total_spin_multiplicity, coupling_multiplicities)
 end
 
 """
@@ -296,16 +336,18 @@ end
 
 Enumerate all legal local spin-projection-sector paths for an ordered multifragment product under fixed left-to-right intermediate coupling multiplicities.
 The prepared fragment caches are read-only, returned small CPU paths own sector indices and Clebsch-Gordan products, final projection is the highest projection of the requested total spin, no determinant Cartesian product/CUDA work occurs, and inconsistent coupling counts raise `ArgumentError`.
+One fragment has the unique path `[1]` with unit Clebsch coefficient and no interfragment coupling.
 """
 function _multifragment_sector_paths(
     prepared::AbstractVector{PreparedPackedFragment64{T}},
     coupling_multiplicities::AbstractVector{<:Integer},
 ) where {T<:AbstractFloat}
     fragment_count = length(prepared)
-    fragment_count >= 2 || throw(ArgumentError("multifragment sector traversal requires at least two fragments"))
+    fragment_count >= 1 || throw(ArgumentError("MEBF sector traversal requires at least one fragment"))
     targets = Int.(coupling_multiplicities)
     length(targets) == fragment_count - 1 || throw(ArgumentError("one coupling multiplicity is required for each multifragment coupling step"))
     all(>(0), targets) || throw(ArgumentError("coupling multiplicities must be positive"))
+    fragment_count == 1 && return [MultifragmentSectorPath(Int[1], one(T))]
 
     sectors = zeros(Int, fragment_count)
     paths = MultifragmentSectorPath{T}[]
@@ -351,10 +393,39 @@ function _multifragment_sector_paths(
 end
 
 """
+    _visit_single_fragment_roots!(visitor, prepared, path, root_positions)
+
+Visit original highest-projection CI determinants for one single-fragment MEBF in its stable magnitude order, without applying a fragment-product cutoff before molecular normalization.
+The CPU cache and dimensionless path/root metadata are read-only; a single reused one-element index vector is passed to `visitor(indices, coefficient)`, whose output may be mutated by the visitor, and no molecular product/GPU arrays are allocated here.
+Invalid topology, nonunit coupling, a lower-projection path or out-of-range roots raise before visitation; collection-wide pruning and determinant-pair screening remain separate downstream operations.
+"""
+function _visit_single_fragment_roots!(
+    visitor,
+    prepared::AbstractVector{PreparedPackedFragment64{T}},
+    path::MultifragmentSectorPath{T},
+    root_positions::UnitRange{Int},
+) where {T<:AbstractFloat}
+    length(prepared) == 1 || throw(ArgumentError("single-fragment root visitation requires exactly one fragment"))
+    path.sectors == Int[1] && path.clebsch_product == one(T) || throw(ArgumentError("single-fragment paths require the highest projection and unit coupling"))
+    roots = prepared[1].sorted_indices[1]
+    isempty(root_positions) && return nothing
+    first(root_positions) >= 1 && last(root_positions) <= length(roots) || throw(BoundsError(roots, root_positions))
+    selected = zeros(Int, 1)
+    coefficients = prepared[1].microstates.coefficients
+    @inbounds for root_position in root_positions
+        determinant = roots[root_position]
+        selected[1] = determinant
+        visitor(selected, coefficients[determinant])
+    end
+    return nothing
+end
+
+"""
     _visit_multifragment_path_products!(visitor, prepared, path, tau_ci)
 
 Traverse determinant tuples for one legal spin-sector path with an exact monotone coefficient-product branch-and-bound and invoke `visitor(indices, coefficient_product)` for every survivor.
 Prepared caches and path metadata are read-only, `tau_ci` uses the established pre-Clebsch local-CI-product semantics, determinant indices are supplied through one reused CPU vector, no full Cartesian product/CUDA storage is created, and invalid thresholds raise `ArgumentError`.
+For one fragment, visit its original highest-projection CI without construction-time truncation; `tau_ci` is still validated and downstream collection/pair cutoffs are unchanged.
 """
 function _visit_multifragment_path_products!(
     visitor,
@@ -364,7 +435,11 @@ function _visit_multifragment_path_products!(
 ) where {T<:AbstractFloat}
     isfinite(tau_ci) && tau_ci >= zero(T) || throw(ArgumentError("tau_ci must be finite and nonnegative"))
     fragment_count = length(prepared)
+    fragment_count >= 1 || throw(ArgumentError("MEBF product traversal requires at least one fragment"))
     length(path.sectors) == fragment_count || throw(DimensionMismatch("sector path length differs from fragment count"))
+    if fragment_count == 1
+        return _visit_single_fragment_roots!(visitor, prepared, path, 1:length(prepared[1].sorted_indices[1]))
+    end
     selected = zeros(Int, fragment_count)
     determinant_lists = Vector{Vector{Int}}(undef, fragment_count)
     maximum_magnitudes = Vector{T}(undef, fragment_count)
@@ -408,6 +483,7 @@ end
 
 Return the exact number of molecular determinant tuples surviving `tau_ci` across all legal spin-sector paths without materializing any molecular determinant product.
 Inputs are read-only and dimensionless, counting uses checked CPU integer arithmetic and exact branch-and-bound traversal, no CUDA work occurs, and malformed coupling/threshold data raise before return.
+For one fragment, count all original highest-projection CI entries before collection-wide pruning instead of applying the multifragment product cutoff.
 """
 function multifragment_product_count(
     prepared::AbstractVector{PreparedPackedFragment64{T}},
@@ -456,7 +532,7 @@ function build_multifragment_product64(
     runtime::RuntimeOptions=RuntimeOptions(),
 ) where {T<:AbstractFloat}
     fragment_count = length(prepared)
-    fragment_count >= 2 || throw(ArgumentError("multifragment product construction requires at least two fragments"))
+    fragment_count >= 1 || throw(ArgumentError("MEBF product construction requires at least one fragment"))
     total_active = sum(fragment.microstates.n_active_orbitals for fragment in prepared)
     total_active <= 64 || throw(ArgumentError("multifragment product exceeds the 64-active-orbital domain"))
     paths = _multifragment_sector_paths(prepared, coupling_multiplicities)
@@ -556,14 +632,14 @@ function _build_multifragment_molecular_basis_function(
     tau_ci::T;
     runtime::RuntimeOptions=RuntimeOptions(),
 ) where {T<:AbstractFloat}
-    length(composition.fragment_state_indices) >= 2 || throw(ArgumentError("multifragment MEBF construction requires at least two fragment states"))
+    length(composition.fragment_state_indices) >= 1 || throw(ArgumentError("MEBF construction requires at least one fragment state"))
     entries = [problem.fragment_states[index] for index in composition.fragment_state_indices]
-    targets = _coupling_targets(length(entries), problem.spin_multiplicity, composition.coupling_multiplicities)
     prepared = PreparedPackedFragment64{T}[]
     for index in composition.fragment_state_indices
         haskey(prepared_fragments, index) || throw(ArgumentError("missing packed multifragment microstates for fragment-state index $index"))
         push!(prepared, prepared_fragments[index])
     end
+    targets = _multifragment_coupling_targets(prepared, problem.spin_multiplicity, composition.coupling_multiplicities)
     product = build_multifragment_product64(prepared, targets, tau_ci; runtime)
     orbital_coefficients, inactive_orbitals = _molecular_orbitals(problem.fragment_states, composition.fragment_state_indices)
     expansion = _multifragment_product_to_expansion(product, inactive_orbitals)

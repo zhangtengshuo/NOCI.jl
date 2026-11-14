@@ -84,6 +84,7 @@ end
 
 Count exactly how many candidate molecular determinants survive the established collection-wide normalized-coefficient cutoff without materializing any determinant product.
 Inputs are read-only and dimensionless, fragment-product screening still uses the existing pre-Clebsch `tau_ci` rule, the final strict `abs(C)>collection_cutoff` comparison matches `_reduce_multifragment_basis_collection`, no molecular masks/CUDA storage are created, and checked count overflow raises.
+For a single fragment, its input CI is already normalized in the cache and callers use `norm=1` to match production without a second normalization or product cutoff.
 """
 function _multifragment_retained_count(
     prepared::AbstractVector{PreparedPackedFragment64{T}},
@@ -145,6 +146,7 @@ end
 
 Perform the exact count-only preflight for every arbitrary-fragment MEBF, including current fragment-product screening, per-MEBF normalization, collection-wide `tau_ci/Cmax` pruning, retained-expansion byte projection, and full determinant-pair upper bounds, without materializing molecular determinants or pair domains.
 The loaded fragment wavefunctions are read-only, returned metadata include legal sector paths, local microstate cardinalities, naive Cartesian upper bounds, exact candidate/retained counts, lower-triangular full-pair bounds, Int32 determinant-index compatibility, and `UInt128` byte projections, no ERI/integral/CUDA work occurs, and this function intentionally stops before molecular orbital/product allocation so it can be used on real 7-mer inputs before a full NOCI run is authorized.
+Single-fragment candidates retain their original normalized highest-projection CI until collection pruning; the reported maxima and retained counts do not re-normalize this cached CI.
 """
 function multifragment_mebf_count_preflight(
     problem::NOCIProblemDefinition{T};
@@ -171,7 +173,7 @@ function multifragment_mebf_count_preflight(
     for mebf_index in eachindex(problem.mebfs)
         composition = problem.mebfs[mebf_index]
         fragment_count = length(composition.fragment_state_indices)
-        fragment_count >= 2 || throw(ArgumentError("count-only multifragment MEBF requires at least two fragment states"))
+        fragment_count >= 1 || throw(ArgumentError("count-only MEBF requires at least one fragment state"))
         labels[mebf_index] = composition.label
         fragment_counts[mebf_index] = fragment_count
         prepared = PreparedPackedFragment64{T}[]
@@ -191,14 +193,14 @@ function multifragment_mebf_count_preflight(
         end
         naive_microstate_cartesian_counts[mebf_index] = naive_count
 
-        targets = _coupling_targets(fragment_count, problem.spin_multiplicity, composition.coupling_multiplicities)
+        targets = _multifragment_coupling_targets(prepared, problem.spin_multiplicity, composition.coupling_multiplicities)
         paths = _multifragment_sector_paths(prepared, targets)
         paths_by_mebf[mebf_index] = paths
         spin_sector_path_counts[mebf_index] = length(paths)
         count, sumsq, maximum_raw = _multifragment_product_magnitude_statistics(prepared, paths, threshold)
         candidate_determinant_counts[mebf_index] = count
         norm_squared[mebf_index] = sumsq
-        normalized_max_coefficients[mebf_index] = maximum_raw / sqrt(sumsq)
+        normalized_max_coefficients[mebf_index] = fragment_count == 1 ? maximum_raw : maximum_raw / sqrt(sumsq)
     end
 
     collection_max_coefficient = maximum(normalized_max_coefficients)
@@ -213,7 +215,7 @@ function multifragment_mebf_count_preflight(
     peak_product_scratch = UInt128(0)
 
     for mebf_index in eachindex(problem.mebfs)
-        norm = sqrt(norm_squared[mebf_index])
+        norm = fragment_counts[mebf_index] == 1 ? one(T) : sqrt(norm_squared[mebf_index])
         retained = _multifragment_retained_count(
             prepared_by_mebf[mebf_index],
             paths_by_mebf[mebf_index],

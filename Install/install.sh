@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: Install/install.sh
+# Purpose: Plan or execute the managed NOCI.jl installation.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 prefix=$HOME/bin/NOCI.jl

@@ -57,7 +57,7 @@ function _multifragment_mebf_preflight(
 
     for index in eachindex(problem.mebfs)
         composition = problem.mebfs[index]
-        length(composition.fragment_state_indices) >= 2 || throw(ArgumentError("production multifragment MEBFs require at least two fragment states"))
+        length(composition.fragment_state_indices) >= 1 || throw(ArgumentError("production MEBFs require at least one fragment state"))
         entries = [problem.fragment_states[state_index] for state_index in composition.fragment_state_indices]
         n_inactive_orbitals = sum(entry.wavefunction.determinants.expansion.inactive_orbitals for entry in entries)
         n_active_orbitals = sum(active_orbital_count(entry.wavefunction.determinants.expansion) for entry in entries)
@@ -73,7 +73,7 @@ function _multifragment_mebf_preflight(
             haskey(prepared_fragments, state_index) || throw(ArgumentError("missing packed fragment-state cache entry $state_index"))
             push!(packed, prepared_fragments[state_index])
         end
-        targets = _coupling_targets(length(packed), problem.spin_multiplicity, composition.coupling_multiplicities)
+        targets = _multifragment_coupling_targets(packed, problem.spin_multiplicity, composition.coupling_multiplicities)
         paths = _multifragment_sector_paths(packed, targets)
         spin_sector_path_counts[index] = length(paths)
         n_candidate_determinants = multifragment_product_count(packed, targets, tau_ci)
@@ -194,7 +194,7 @@ function build_multifragment_product64_from_plan(
     runtime::RuntimeOptions=RuntimeOptions(),
 ) where {T<:Union{Float32,Float64}}
     fragment_count = length(prepared)
-    fragment_count >= 2 || throw(ArgumentError("multifragment product construction requires at least two fragments"))
+    fragment_count >= 1 || throw(ArgumentError("MEBF product construction requires at least one fragment"))
     length(entry.fragment_state_indices) == fragment_count || throw(DimensionMismatch(
         "planned fragment-state count differs from prepared fragment count",
     ))
@@ -416,6 +416,7 @@ end
 
 Build production Float32/Float64 molecular MEBFs through a reusable exact-count assembly plan and preserve the established collection-wide `tau_ci/Cmax` pre-pruning without renormalization.
 The shared fragment cache is prepared once, MEBF exact counts run in parallel across deterministic balanced index ranges, the collection memory guard executes before molecular materialization, each MEBF uses exact-sized disjoint-slice parallel fill without a local recount, and its post-sort phase/reorder loop is also parallelized without changing normalization or sorting. Only one MEBF is materialized at a time.
+Single-fragment MEBFs use the normalized original highest-projection CI, empty spin coupling and the same resource/phase/collection-pruning machinery as coupled MEBFs; both G-NOCI and AHPC-NOCI consume these CPU-owned results.
 """
 function build_molecular_basis_functions(
     problem::NOCIProblemDefinition{T};

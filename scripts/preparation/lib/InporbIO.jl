@@ -1,3 +1,7 @@
+# File: scripts/preparation/lib/InporbIO.jl
+# Purpose: Parse and write OpenMolcas INPORB orbital files in the preparation workflow.
+# SPDX-License-Identifier: Apache-2.0
+
 module InporbIO
 
 using Printf

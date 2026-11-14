@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/align_fragments.sh
+# Purpose: Align prepared fragment geometries to their aggregate placements.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

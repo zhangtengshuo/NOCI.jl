@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# File: scripts/preparation/make_factor_bundle.sh
+# Purpose: Generate a Cholesky or density-fitting integral factor bundle.
+# SPDX-License-Identifier: Apache-2.0
+
 set -euo pipefail
 export JULIA_LOAD_PATH='@:@stdlib'
 

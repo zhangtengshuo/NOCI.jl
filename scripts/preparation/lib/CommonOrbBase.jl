@@ -1,9 +1,6 @@
-# Julia replication of preprocess/fortran/gcommon.f90.
-#
-# Builds a common MO basis from fragment INPORB files, writes COMMONORB,
-# generates the per-state .vec files used by rdtraint, and rewrites .det
-# headers with determinant counts/labels. Molcas RunFile/OneInt access is
-# provided by MolcasIO.jl.
+# File: scripts/preparation/lib/CommonOrbBase.jl
+# Purpose: Construct a common MO basis and GronOR-compatible state vectors and determinant metadata.
+# Algorithm origin: GronOR gcommon common-orbital workflow and input conventions (Straatsma et al., J. Chem. Theory Comput. 18, 3549-3565, 2022; doi:10.1021/acs.jctc.2c00266).
 
 using LinearAlgebra
 using Printf

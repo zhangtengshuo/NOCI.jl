@@ -1,4 +1,7 @@
 #!/usr/bin/env julia
+# File: tools/openmolcas4noci.jl
+# Purpose: Launch an input through the configured OpenMolcas4NOCI backend.
+# SPDX-License-Identifier: Apache-2.0
 
 using NOCI
 

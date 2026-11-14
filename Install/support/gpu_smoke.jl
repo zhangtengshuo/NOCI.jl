@@ -1,3 +1,7 @@
+# File: Install/support/gpu_smoke.jl
+# Purpose: Check the optional CUDA extension and a small device operation.
+# SPDX-License-Identifier: Apache-2.0
+
 using NOCI
 using YAML
 using CUDA

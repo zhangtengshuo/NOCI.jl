@@ -1,3 +1,7 @@
+# File: scripts/preparation/prepare.jl
+# Purpose: Dispatch the standard fragment preparation workflow.
+# SPDX-License-Identifier: Apache-2.0
+
 include("case_driver.jl")
 
 """

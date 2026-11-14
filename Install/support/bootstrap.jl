@@ -1,3 +1,7 @@
+# File: Install/support/bootstrap.jl
+# Purpose: Instantiate and precompile locked Julia installation environments.
+# SPDX-License-Identifier: Apache-2.0
+
 using Pkg
 using SHA
 

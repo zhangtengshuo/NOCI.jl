@@ -7,6 +7,7 @@ Paths are relative to that YAML; independent definitions use distinct `project` 
 
 | Definition | Purpose |
 | --- | --- |
+| `ethene_monomer.yaml` | One ethene molecule, S0 and S1 singlet MEBFs, with one fragment row. |
 | `ethene_dimer.yaml` | Six MEBFs: S0S0, S1S0, S0S1, D+D-, D-D+, T1T1. |
 | `ethene_trimer.yaml` | Six explicitly declared trimer columns on GS0S0S0 geometry. |
 | `ethene2_butadiene.yaml` | Two ethene instances and one butadiene instance. |

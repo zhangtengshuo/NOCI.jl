@@ -339,16 +339,16 @@ end
 """
     _parse_noci_algorithm(mapping)
 
-Parse exactly `dp-noci` or production `ahpc-noci` plus its typed support lookup and occupied-spin cofactor evaluation from a YAML algorithm mapping.
+Parse exactly `gronor-noci` or production `ahpc-noci` plus its typed support lookup and occupied-spin cofactor evaluation from a YAML algorithm mapping.
 The mapping is read-only, construction allocates only small immutable selectors, no CUDA work occurs, and unknown or inapplicable options raise `ArgumentError`.
 """
 function _parse_noci_algorithm(mapping::AbstractDict)
     name = _yaml_string(_required_yaml(mapping, "name", "algorithm"), "algorithm.name")
-    if name == "dp-noci"
-        length(mapping) == 1 || throw(ArgumentError("dp-noci accepts no AHPC branch or acceleration options"))
-        return DPNOCI()
+    if name == "gronor-noci"
+        length(mapping) == 1 || throw(ArgumentError("gronor-noci accepts no AHPC branch or acceleration options"))
+        return GronorNOCI()
     end
-    name == "ahpc-noci" || throw(ArgumentError("algorithm.name must be dp-noci or ahpc-noci"))
+    name == "ahpc-noci" || throw(ArgumentError("algorithm.name must be gronor-noci or ahpc-noci"))
     branch_name_value = _yaml_string(get(mapping, "branch", "spin_string"), "algorithm.branch")
     branch_name_value == "spin_string" || throw(ArgumentError("algorithm.branch must be spin_string"))
     lookup_name = _yaml_string(get(mapping, "support_lookup", "adaptive"), "algorithm.support_lookup")
@@ -515,7 +515,7 @@ end
     read_noci_input(path; T=Float64)
 
 Read the clean repository-relative YAML schema and return a validated `NOCIInput` without loading scientific data files.
-The YAML file is read-only, relative paths resolve against its directory, CUDA and OpenMolcas are never initialized during parsing, and malformed schemas or unsupported DP-NOCI/direct-factor-bundle combinations raise before numerical allocation.
+The YAML file is read-only, relative paths resolve against its directory, CUDA and OpenMolcas are never initialized during parsing, and malformed schemas or unsupported G-NOCI/direct-factor-bundle combinations raise before numerical allocation.
 """
 function read_noci_input(path::AbstractString; T::Type{S}=Float64) where {S<:AbstractFloat}
     isfile(path) || throw(ArgumentError("NOCI YAML input not found: $path"))
